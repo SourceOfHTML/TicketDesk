@@ -1,0 +1,2 @@
+# Agent worktrees: full checkouts with their own .git, not repo content.
+.claude/worktrees/
