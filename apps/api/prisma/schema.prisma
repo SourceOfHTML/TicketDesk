@@ -10,12 +10,28 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  role         String
-  createdAt    DateTime  @default(now())
-  sessions     Session[]
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  role            String
+  createdAt       DateTime @default(now())
+  sessions        Session[]
+  createdTickets  Ticket[] @relation("TicketCreator")
+  assignedTickets Ticket[] @relation("TicketAssignee")
+}
+
+model Ticket {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  priority    String
+  status      String
+  creatorId   String
+  assigneeId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creator     User     @relation("TicketCreator", fields: [creatorId], references: [id])
+  assignee    User?    @relation("TicketAssignee", fields: [assigneeId], references: [id])
 }
 
 model Session {

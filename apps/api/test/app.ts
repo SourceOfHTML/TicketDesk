@@ -17,6 +17,7 @@ export async function createTestApp(): Promise<INestApplication> {
 export async function resetDb(app: INestApplication): Promise<void> {
   // Dependency order. Child tables are deleted before the rows they point at,
   // so foreign keys never block the reset.
+  await app.get(PrismaService).ticket.deleteMany();
   await app.get(PrismaService).session.deleteMany();
   await app.get(PrismaService).user.deleteMany();
 }

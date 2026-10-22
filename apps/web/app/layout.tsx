@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Header } from '../components/header';
 import { SessionProvider } from '../components/session-provider';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'TicketDesk',
