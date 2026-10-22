@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 interface ErrorBannerProps {
   messages: string[];
   /** Present only for a 5xx, which also gets a Copy details control. */
@@ -22,14 +24,22 @@ export function ErrorBanner({ messages, details }: ErrorBannerProps) {
 }
 
 function CopyDetails({ details }: { details: string }) {
+  const [copied, setCopied] = useState(false);
+
   return (
-    <button
-      type="button"
-      onClick={() => {
-        void navigator.clipboard.writeText(details).catch(() => undefined);
-      }}
-    >
-      Copy details
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(details)
+            .then(() => setCopied(true))
+            .catch(() => undefined);
+        }}
+      >
+        Copy details
+      </button>
+      {copied ? <span role="status">Copied.</span> : null}
+    </>
   );
 }

@@ -4,14 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { hashPassword } from '../src/auth/password';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createTestApp, resetDb } from './app';
-
-function setCookies(response: request.Response): string[] {
-  const header = response.headers['set-cookie'];
-  if (header === undefined) {
-    return [];
-  }
-  return Array.isArray(header) ? header : [header];
-}
+import { sessionTokenOf, setCookies } from './cookies';
 
 describe('POST /api/auth/login', () => {
   let app: INestApplication;
@@ -50,8 +43,9 @@ describe('POST /api/auth/login', () => {
     const cookie = setCookies(response)[0];
     expect(cookie).toMatch(/^session=[^;]+; HttpOnly; SameSite=Lax; Path=\/; Max-Age=604800$/);
 
-    const token = /^session=([^;]+)/.exec(cookie ?? '')?.[1];
-    const session = await prisma.session.findUnique({ where: { id: token ?? '' } });
+    const session = await prisma.session.findUnique({
+      where: { id: sessionTokenOf(cookie ?? '') },
+    });
 
     expect(session?.userId).toBe(user.id);
     expect(session?.expiresAt.getTime()).toBeGreaterThan(Date.now() + 6.9 * 24 * 60 * 60 * 1000);

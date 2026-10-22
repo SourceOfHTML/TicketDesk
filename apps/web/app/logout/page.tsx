@@ -22,7 +22,7 @@ export default function LogoutPage() {
   return (
     <section>
       <h1>Sign out</h1>
-      <p>Signing out…</p>
+      <p role="status">Signing out…</p>
     </section>
   );
 }

@@ -4,9 +4,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_PATHS = new Set(['/login', '/signup']);
 
 /**
- * The only server-side gate. It reads the cookie's presence and never its
- * validity — resolving the session is the API's job — and it must not answer an
- * API 401 with an HTML redirect, which is why `api` is excluded by the matcher.
+ * A navigation redirect, not a security boundary: the API is the only boundary
+ * (ADR-0001). It reads the cookie's presence and never its validity —
+ * resolving the session is the API's job — and it must not answer an API 401
+ * with an HTML redirect, which is why `api` is excluded by the matcher.
  *
  * There is deliberately no inverse redirect for a signed-in visitor: a cookie
  * that has outlived its Session row would loop forever.
