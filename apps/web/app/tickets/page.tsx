@@ -1,37 +1,44 @@
 'use client';
 
-import type { Priority, Status, Ticket } from '@ticketdesk/shared';
+import {
+  ticketListQueryString,
+  type Priority,
+  type Status,
+  type Ticket,
+  type TicketListQuery,
+} from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
 import { sessionRequest } from '../../lib/api';
 import { normalizeError, type FormErrors } from '../../lib/form-errors';
 
-const STATUS_OPTIONS: ReadonlyArray<{ value: Status; label: string }> = [
-  { value: 'open', label: 'Open' },
-  { value: 'in-progress', label: 'In progress' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'closed', label: 'Closed' },
-];
+// Exhaustive records: adding a Status or Priority fails compilation until it
+// has a label. The option lists are derived, so there is one source per list.
+const STATUS_LABELS: Record<Status, string> = {
+  open: 'Open',
+  'in-progress': 'In progress',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
 
-const PRIORITY_OPTIONS: ReadonlyArray<{ value: Priority; label: string }> = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-];
+const PRIORITY_LABELS: Record<Priority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
 
-const STATUS_LABELS = Object.fromEntries(
-  STATUS_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<Status, string>;
-
-const PRIORITY_LABELS = Object.fromEntries(
-  PRIORITY_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<Priority, string>;
-
-interface Filters {
-  status: Status[];
-  priority: Priority[];
+function optionsOf<T extends string>(
+  labels: Record<T, string>,
+): Array<{ value: T; label: string }> {
+  return (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
 }
+
+const STATUS_OPTIONS = optionsOf(STATUS_LABELS);
+const PRIORITY_OPTIONS = optionsOf(PRIORITY_LABELS);
+
+/** The shared query's shape, with both filters always present. */
+type Filters = Required<TicketListQuery>;
 
 function toggle<T>(values: T[], value: T): T[] {
   return values.includes(value)
@@ -39,18 +46,43 @@ function toggle<T>(values: T[], value: T): T[] {
     : [...values, value];
 }
 
-function listPath({ status, priority }: Filters): string {
-  const params = new URLSearchParams();
-
-  if (status.length > 0) {
-    params.set('status', status.join(','));
-  }
-  if (priority.length > 0) {
-    params.set('priority', priority.join(','));
-  }
-
-  const query = params.toString();
+function listPath(filters: Filters): string {
+  const query = ticketListQueryString(filters);
   return query === '' ? '/api/tickets' : `/api/tickets?${query}`;
+}
+
+interface FilterFieldsetProps<T extends string> {
+  name: string;
+  legend: string;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  selected: T[];
+  onToggle: (value: T) => void;
+}
+
+function FilterFieldset<T extends string>({
+  name,
+  legend,
+  options,
+  selected,
+  onToggle,
+}: FilterFieldsetProps<T>) {
+  return (
+    <fieldset>
+      <legend>{legend}</legend>
+      {options.map((option) => (
+        <label key={option.value}>
+          <input
+            type="checkbox"
+            name={name}
+            value={option.value}
+            checked={selected.includes(option.value)}
+            onChange={() => onToggle(option.value)}
+          />{' '}
+          {option.label}
+        </label>
+      ))}
+    </fieldset>
+  );
 }
 
 export default function TicketsPage() {
@@ -59,6 +91,10 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [failure, setFailure] = useState<FormErrors | null>(null);
   const [filters, setFilters] = useState<Filters>({ status: [], priority: [] });
+  // Which filters produced the rows on screen, so the empty message describes
+  // the response rather than a selection still in flight.
+  const [loadedFilters, setLoadedFilters] = useState<Filters>({ status: [], priority: [] });
+  const [requestInFlight, setRequestInFlight] = useState(true);
 
   // A filter change starts a new fetch while an older one may still be in
   // flight; only the newest response may touch the table.
@@ -67,76 +103,66 @@ export default function TicketsPage() {
   useEffect(() => {
     const requestId = ++latestRequest.current;
     let active = true;
+    setRequestInFlight(true);
 
-    void sessionRequest<Ticket[]>(listPath(filters)).then((result) => {
-      if (!active || requestId !== latestRequest.current) {
-        return;
-      }
+    void sessionRequest<Ticket[]>(listPath(filters))
+      .then((result) => {
+        if (!active || requestId !== latestRequest.current) {
+          return;
+        }
 
-      if (result.ok) {
-        setTickets(result.data);
-        setFailure(null);
-      } else {
-        // The current rows stay exactly as they are; the banner is the news.
-        setFailure(normalizeError(result.error, []));
-      }
-    });
+        if (result.ok) {
+          setTickets(result.data);
+          setLoadedFilters(filters);
+          setFailure(null);
+        } else {
+          // The current rows stay exactly as they are; the banner is the news.
+          setFailure(normalizeError(result.error, []));
+        }
+      })
+      .finally(() => {
+        if (requestId === latestRequest.current) {
+          setRequestInFlight(false);
+        }
+      });
 
     return () => {
       active = false;
     };
   }, [filters]);
 
-  // First load only: a refetch keeps the current rows visible and unmarked.
-  const firstLoadInFlight = tickets === null && failure === null;
-  const hasFilters = filters.status.length > 0 || filters.priority.length > 0;
+  // Unknown data waits, and only a list with no rows is unknown: a refetch
+  // keeps the current rows visible and unmarked.
+  const firstLoadInFlight = tickets === null && requestInFlight;
+  const hasFilters = loadedFilters.status.length > 0 || loadedFilters.priority.length > 0;
 
   return (
     <section aria-labelledby="tickets-heading">
       <h1 id="tickets-heading">Tickets</h1>
 
       <div role="group" aria-label="Filters">
-        <fieldset>
-          <legend>Status</legend>
-          {STATUS_OPTIONS.map((option) => (
-            <label key={option.value}>
-              <input
-                type="checkbox"
-                name="status"
-                value={option.value}
-                checked={filters.status.includes(option.value)}
-                onChange={() =>
-                  setFilters((current) => ({
-                    ...current,
-                    status: toggle(current.status, option.value),
-                  }))
-                }
-              />{' '}
-              {option.label}
-            </label>
-          ))}
-        </fieldset>
+        <FilterFieldset
+          name="status"
+          legend="Status"
+          options={STATUS_OPTIONS}
+          selected={filters.status}
+          onToggle={(status) =>
+            setFilters((current) => ({ ...current, status: toggle(current.status, status) }))
+          }
+        />
 
-        <fieldset>
-          <legend>Priority</legend>
-          {PRIORITY_OPTIONS.map((option) => (
-            <label key={option.value}>
-              <input
-                type="checkbox"
-                name="priority"
-                value={option.value}
-                checked={filters.priority.includes(option.value)}
-                onChange={() =>
-                  setFilters((current) => ({
-                    ...current,
-                    priority: toggle(current.priority, option.value),
-                  }))
-                }
-              />{' '}
-              {option.label}
-            </label>
-          ))}
-        </fieldset>
+        <FilterFieldset
+          name="priority"
+          legend="Priority"
+          options={PRIORITY_OPTIONS}
+          selected={filters.priority}
+          onToggle={(priority) =>
+            setFilters((current) => ({
+              ...current,
+              priority: toggle(current.priority, priority),
+            }))
+          }
+        />
       </div>
 
       {failure === null ? null : (

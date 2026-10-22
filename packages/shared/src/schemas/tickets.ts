@@ -20,8 +20,6 @@ export const ticketSchema = z.object({
   description: z.string(),
   priority: prioritySchema,
   status: statusSchema,
-  creatorId: z.string(),
-  assigneeId: z.string().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   creator: userRefSchema,
@@ -62,3 +60,21 @@ export const ticketListQuerySchema = z.strictObject({
   priority: commaSeparated(prioritySchema).optional(),
 });
 export type TicketListQuery = z.infer<typeof ticketListQuerySchema>;
+
+/**
+ * The wire form of the filters — the inverse of `commaSeparated`. Both
+ * directions of the query contract are defined here, so the browser cannot
+ * drift from the schema the API enforces.
+ */
+export function ticketListQueryString(query: TicketListQuery): string {
+  const params = new URLSearchParams();
+
+  if (query.status !== undefined && query.status.length > 0) {
+    params.set('status', query.status.join(','));
+  }
+  if (query.priority !== undefined && query.priority.length > 0) {
+    params.set('priority', query.priority.join(','));
+  }
+
+  return params.toString();
+}

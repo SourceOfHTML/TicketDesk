@@ -145,16 +145,16 @@ describe('GET /api/tickets', () => {
   });
 
   it('refuses anonymous callers and scopes each Requester to their own Tickets', async () => {
-    const owner = await createActor(app);
+    const requester = await createActor(app);
     const otherRequester = await createActor(app);
     await createActor(app, 'STAFF');
 
-    const ownTicket = await createTicket(app, { creatorId: owner.user.id });
+    const ownTicket = await createTicket(app, { creatorId: requester.user.id });
     const othersTicket = await createTicket(app, { creatorId: otherRequester.user.id });
 
     await request(app.getHttpServer()).get('/api/tickets').expect(401);
 
-    const own = await owner.agent.get('/api/tickets').expect(200);
+    const own = await requester.agent.get('/api/tickets').expect(200);
     expect(own.body.map((ticket: { id: string }) => ticket.id)).toEqual([ownTicket.id]);
 
     const other = await otherRequester.agent.get('/api/tickets').expect(200);
