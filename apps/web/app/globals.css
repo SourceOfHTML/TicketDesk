@@ -1,0 +1,92 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+header,
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+header nav {
+  display: flex;
+  gap: 0.75rem;
+}
+
+fieldset {
+  border: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+fieldset label {
+  margin-right: 0.75rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #d4d4d4;
+  text-align: left;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.05rem 0.55rem;
+  border: 1px solid #6b7280;
+  border-radius: 999px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.badge-open {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.badge-in-progress {
+  border-color: #b45309;
+  color: #92400e;
+}
+
+.badge-resolved {
+  border-color: #15803d;
+  color: #166534;
+}
+
+.badge-closed {
+  border-color: #4b5563;
+  color: #374151;
+}
+
+.badge-low {
+  border-color: #0f766e;
+  color: #115e59;
+}
+
+.badge-medium {
+  border-color: #a16207;
+  color: #854d0e;
+}
+
+.badge-high {
+  border-color: #b91c1c;
+  color: #991b1b;
+}
