@@ -22,6 +22,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>({ user: null, known: false });
 
   useEffect(() => {
+    // Signing out deletes the row this request would resolve; the page
+    // navigates on its own, so asking here would only race it.
+    if (window.location.pathname === '/logout') {
+      return;
+    }
+
     let active = true;
     meRequest ??= sessionRequest<UserSummary>('/api/auth/me');
 

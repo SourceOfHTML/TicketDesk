@@ -14,8 +14,8 @@ export function generateSessionToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
-export function sessionExpiry(now = new Date()): Date {
-  return new Date(now.getTime() + SESSION_LIFETIME_MS);
+export function sessionExpiry(): Date {
+  return new Date(Date.now() + SESSION_LIFETIME_MS);
 }
 
 /**

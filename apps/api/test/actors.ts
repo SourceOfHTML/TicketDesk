@@ -20,7 +20,7 @@ function actorHash(): Promise<string> {
 export interface Actor {
   user: UserModel;
   agent: ReturnType<typeof request.agent>;
-  login: request.Response;
+  loginResponse: request.Response;
 }
 
 /**
@@ -35,10 +35,10 @@ export async function createActor(app: INestApplication, role: Role = 'USER'): P
     .user.create({ data: { email, passwordHash: await actorHash(), role } });
 
   const agent = request.agent(app.getHttpServer());
-  const login = await agent
+  const loginResponse = await agent
     .post('/api/auth/login')
     .send({ email, password: ACTOR_PASSWORD })
     .expect(200);
 
-  return { user, agent, login };
+  return { user, agent, loginResponse };
 }

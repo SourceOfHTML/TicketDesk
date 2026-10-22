@@ -8,6 +8,7 @@ import { Roles, RolesGuard } from '../src/auth/roles.guard';
 import { SessionGuard } from '../src/auth/session.guard';
 import { createActor } from './actors';
 import { resetDb } from './app';
+import { setCookies } from './cookies';
 
 /** A Staff-only route used only to observe a 403's cookie, until real ones exist. */
 @Controller('staff-only')
@@ -54,14 +55,6 @@ function parseSetCookie(raw: string): ParsedSetCookie {
   };
 }
 
-function setCookies(response: request.Response): string[] {
-  const header = response.headers['set-cookie'];
-  if (header === undefined) {
-    return [];
-  }
-  return Array.isArray(header) ? header : [header];
-}
-
 function sessionCookies(response: request.Response): ParsedSetCookie[] {
   return setCookies(response)
     .map(parseSetCookie)
@@ -102,7 +95,7 @@ describe('the session cookie', () => {
   it('sets HttpOnly; SameSite=Lax; Path=/; Max-Age=604800 on login', async () => {
     const actor = await createActor(app);
 
-    const cookies = sessionCookies(actor.login);
+    const cookies = sessionCookies(actor.loginResponse);
     expect(cookies).toHaveLength(1);
     expect(cookies[0]?.value).not.toBe('');
     expectSessionAttributes(cookies[0]!, 604800);
@@ -110,7 +103,7 @@ describe('the session cookie', () => {
 
   it('re-issues the same token with a recomputed Max-Age on an authenticated request', async () => {
     const actor = await createActor(app);
-    const token = sessionCookies(actor.login)[0]?.value;
+    const token = sessionCookies(actor.loginResponse)[0]?.value;
 
     const me = await actor.agent.get('/api/auth/me').expect(200);
 
@@ -122,7 +115,7 @@ describe('the session cookie', () => {
 
   it('re-issues the same token on a response that ends in 403', async () => {
     const actor = await createActor(app, 'USER');
-    const token = sessionCookies(actor.login)[0]?.value;
+    const token = sessionCookies(actor.loginResponse)[0]?.value;
 
     const forbidden = await actor.agent.get('/api/staff-only').expect(403);
 
@@ -146,7 +139,7 @@ describe('the session cookie', () => {
 
   it('sends the logout refresh first and the clear last', async () => {
     const actor = await createActor(app);
-    const token = sessionCookies(actor.login)[0]?.value;
+    const token = sessionCookies(actor.loginResponse)[0]?.value;
 
     const logout = await actor.agent.post('/api/auth/logout').expect(200);
 

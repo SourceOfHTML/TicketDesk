@@ -1,21 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { hashPassword } from '../src/auth/password';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { createActor } from './actors';
 import { createTestApp, resetDb } from './app';
-
-function setCookies(response: request.Response): string[] {
-  const header = response.headers['set-cookie'];
-  if (header === undefined) {
-    return [];
-  }
-  return Array.isArray(header) ? header : [header];
-}
-
-function tokenOf(cookie: string): string {
-  return /^session=([^;]+)/.exec(cookie)?.[1] ?? '';
-}
+import { sessionTokenOf, setCookies } from './cookies';
 
 describe('the session guard', () => {
   let app: INestApplication;
@@ -34,22 +23,18 @@ describe('the session guard', () => {
     await resetDb(app);
   });
 
-  async function signIn(): Promise<{ cookie: string; userId: string }> {
-    const passwordHash = await hashPassword('correct horse');
-    const user = await prisma.user.create({
-      data: { email: 'requester@example.com', passwordHash, role: 'USER' },
-    });
-    const login = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: 'requester@example.com', password: 'correct horse' })
-      .expect(200);
-
-    return { cookie: setCookies(login)[0] ?? '', userId: user.id };
+  async function signIn(): Promise<{ cookie: string; userId: string; email: string }> {
+    const actor = await createActor(app);
+    return {
+      cookie: setCookies(actor.loginResponse)[0] ?? '',
+      userId: actor.user.id,
+      email: actor.user.email,
+    };
   }
 
   it('answers GET /api/auth/me with the caller and slides the session', async () => {
-    const { cookie, userId } = await signIn();
-    const token = tokenOf(cookie);
+    const { cookie, userId, email } = await signIn();
+    const token = sessionTokenOf(cookie);
 
     // An hour old proves the refresh moves the row, rather than reading back
     // what login already wrote.
@@ -65,7 +50,7 @@ describe('the session guard', () => {
 
     expect(me.body).toEqual({
       id: userId,
-      email: 'requester@example.com',
+      email,
       role: 'USER',
     });
 
@@ -101,7 +86,7 @@ describe('the session guard', () => {
 
   it('deletes the session on logout and clears the cookie last', async () => {
     const { cookie } = await signIn();
-    const token = tokenOf(cookie);
+    const token = sessionTokenOf(cookie);
 
     const response = await request(app.getHttpServer())
       .post('/api/auth/logout')
@@ -120,7 +105,7 @@ describe('the session guard', () => {
 
   it('refuses an expired token, clears it, and leaves the row in place', async () => {
     const { cookie } = await signIn();
-    const token = tokenOf(cookie);
+    const token = sessionTokenOf(cookie);
     const expiredAt = new Date(Date.now() - 1000);
     await prisma.session.update({ where: { id: token }, data: { expiresAt: expiredAt } });
 
