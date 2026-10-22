@@ -11,6 +11,13 @@ export const signupSchema = z.strictObject({
 
 export type SignupInput = z.infer<typeof signupSchema>;
 
+export const loginSchema = z.strictObject({
+  email: z.email().trim().toLowerCase(),
+  password: z.string().min(1),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
+
 export const userSummarySchema = z.object({
   id: z.string(),
   email: z.email(),
