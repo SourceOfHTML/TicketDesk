@@ -1,6 +1,7 @@
 'use client';
 
 import type { UserSummary } from '@ticketdesk/shared';
+import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
 import { FormField } from '../../components/form-field';
@@ -88,6 +89,10 @@ export default function LoginPage() {
           Sign in
         </button>
       </form>
+
+      <p>
+        <Link href="/signup">Create an account</Link>
+      </p>
     </section>
   );
 }
