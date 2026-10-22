@@ -13,6 +13,7 @@ export {
   prioritySchema,
   statusSchema,
   ticketListQuerySchema,
+  ticketListQueryString,
   ticketSchema,
   userRefSchema,
   type Priority,
