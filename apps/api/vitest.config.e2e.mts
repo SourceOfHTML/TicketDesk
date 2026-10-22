@@ -10,6 +10,10 @@ export default defineConfig({
     globalSetup: ['./test/global-setup.ts'],
     setupFiles: ['./test/setup-database.ts'],
     fileParallelism: true,
+    // Files run in parallel; spawning the Prisma CLI twice (the seed test) and
+    // argon2id hashing are both CPU-hungry, so Vitest's 5 s default races a
+    // loaded machine rather than a slow product.
+    testTimeout: 20_000,
   },
   resolve: {
     // Vitest does not read tsconfig `paths`; this is the one alias the tests need.
