@@ -1,0 +1,29 @@
+{
+  "name": "ticketdesk",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "dev": "pnpm bootstrap && pnpm -r --parallel run dev",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --no-bail run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "prisma generate && pnpm -r --no-bail run test",
+    "gates": "tsx scripts/gates.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "eslint": "10.13.0",
+    "prettier": "3.9.10",
+    "prisma": "7.10.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0"
+  }
+}

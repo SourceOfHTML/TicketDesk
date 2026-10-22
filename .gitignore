@@ -1,2 +1,20 @@
 # Agent worktrees: full checkouts with their own .git, not repo content.
 .claude/worktrees/
+
+node_modules/
+dist/
+.next/
+next-env.d.ts
+
+# Local configuration and the database itself.
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Generated Prisma client (build output).
+apps/api/src/generated/
+
+*.tsbuildinfo
+apps/web/AGENTS.md

@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+pnpm-lock.yaml
+apps/api/src/generated
+apps/api/prisma/migrations
+*.db
+
+# Prose and research documents predate the formatter.
+docs

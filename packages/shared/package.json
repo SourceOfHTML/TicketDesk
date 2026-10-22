@@ -1,0 +1,19 @@
+{
+  "name": "@ticketdesk/shared",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --config vitest.config.mts",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "5.0.5",
+    "vite": "8.3.5"
+  }
+}
