@@ -1,6 +1,6 @@
 'use client';
 
-import type { CreateTicketInput, Ticket } from '@ticketdesk/shared';
+import type { CreateTicketInput, Priority, Ticket } from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
@@ -14,6 +14,13 @@ import { useMutation } from '../../../lib/use-mutation';
 /** The only fields a message may be attached to on this form. */
 const TICKET_FIELDS = ['title', 'description', 'priority'] as const;
 
+/**
+ * The form may hold a Priority not yet chosen; the wire input may not. Starting
+ * unset keeps the choice explicit — a Requester who forgets it gets the API's
+ * 400 beside the group rather than a silently chosen Priority.
+ */
+type FormValues = Omit<CreateTicketInput, 'priority'> & { priority: Priority | '' };
+
 /** Each Priority is drawn exactly as it will appear on the Ticket it produces. */
 const PRIORITY_CHOICES = PRIORITY_OPTIONS.map((option) => ({
   value: option.value,
@@ -21,10 +28,10 @@ const PRIORITY_CHOICES = PRIORITY_OPTIONS.map((option) => ({
 }));
 
 export default function NewTicketPage() {
-  const [values, setValues] = useState<CreateTicketInput>({
+  const [values, setValues] = useState<FormValues>({
     title: '',
     description: '',
-    priority: 'medium',
+    priority: '',
   });
   const [errors, setErrors] = useState<FormErrors>(emptyFormErrors);
 
