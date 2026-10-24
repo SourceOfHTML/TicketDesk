@@ -47,6 +47,10 @@ td {
   text-align: left;
 }
 
+.ticket-description {
+  white-space: pre-wrap;
+}
+
 .badge {
   display: inline-block;
   padding: 0.05rem 0.55rem;

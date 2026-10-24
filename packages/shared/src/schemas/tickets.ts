@@ -27,6 +27,39 @@ export const ticketSchema = z.object({
 });
 export type Ticket = z.infer<typeof ticketSchema>;
 
+/** A Comment is written once and never altered; its author is a summary. */
+export const commentSchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  createdAt: z.iso.datetime(),
+  author: userRefSchema,
+});
+export type Comment = z.infer<typeof commentSchema>;
+
+/** One move in a Ticket's audit trail: who moved it, when, and why. */
+export const statusChangeSchema = z.object({
+  id: z.string(),
+  fromStatus: statusSchema,
+  toStatus: statusSchema,
+  reason: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  changedBy: userRefSchema,
+});
+export type StatusChange = z.infer<typeof statusChangeSchema>;
+
+/** The detail response: the Ticket plus both of its threads, each ascending. */
+export const ticketDetailSchema = ticketSchema.extend({
+  comments: z.array(commentSchema),
+  statusChanges: z.array(statusChangeSchema),
+});
+export type TicketDetail = z.infer<typeof ticketDetailSchema>;
+
+/** Any string is a well-formed id; an unknown one is a 404 from the service. */
+export const ticketParamsSchema = z.strictObject({
+  id: z.string().min(1),
+});
+export type TicketParams = z.infer<typeof ticketParamsSchema>;
+
 /**
  * `?status=open,closed` — one parameter, several chosen values. Each value is
  * parsed by the item schema, and its issue is re-emitted at the parameter's own

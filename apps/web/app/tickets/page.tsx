@@ -1,32 +1,12 @@
 'use client';
 
-import {
-  ticketListQueryString,
-  type Priority,
-  type Status,
-  type Ticket,
-  type TicketListQuery,
-} from '@ticketdesk/shared';
+import { ticketListQueryString, type Ticket, type TicketListQuery } from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
 import { sessionRequest } from '../../lib/api';
 import { normalizeError, type FormErrors } from '../../lib/form-errors';
-
-// Exhaustive records: adding a Status or Priority fails compilation until it
-// has a label. The option lists are derived, so there is one source per list.
-const STATUS_LABELS: Record<Status, string> = {
-  open: 'Open',
-  'in-progress': 'In progress',
-  resolved: 'Resolved',
-  closed: 'Closed',
-};
-
-const PRIORITY_LABELS: Record<Priority, string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-};
+import { PRIORITY_LABELS, STATUS_LABELS } from '../../lib/ticket-labels';
 
 function optionsOf<T extends string>(
   labels: Record<T, string>,

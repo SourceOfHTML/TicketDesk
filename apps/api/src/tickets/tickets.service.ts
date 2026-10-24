@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  ticketDetailSchema,
   ticketSchema,
   type Ticket,
+  type TicketDetail,
   type TicketListQuery,
   type UserSummary,
 } from '@ticketdesk/shared';
@@ -39,5 +41,50 @@ export class TicketsService {
         updatedAt: ticket.updatedAt.toISOString(),
       }),
     );
+  }
+
+  /**
+   * One Ticket with both of its threads, ascending. Missing authorization is a
+   * 403, never a 404 — only an absent Ticket is a 404, which is why the lookup
+   * happens before the ownership check.
+   */
+  async get(user: UserSummary, id: string): Promise<TicketDetail> {
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id },
+      include: {
+        creator: { select: USER_REF },
+        assignee: { select: USER_REF },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          include: { author: { select: USER_REF } },
+        },
+        statusChanges: {
+          orderBy: { createdAt: 'asc' },
+          include: { changedBy: { select: USER_REF } },
+        },
+      },
+    });
+
+    if (ticket === null) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (user.role !== 'STAFF' && ticket.creatorId !== user.id) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    return ticketDetailSchema.parse({
+      ...ticket,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+      comments: ticket.comments.map((comment) => ({
+        ...comment,
+        createdAt: comment.createdAt.toISOString(),
+      })),
+      statusChanges: ticket.statusChanges.map((change) => ({
+        ...change,
+        createdAt: change.createdAt.toISOString(),
+      })),
+    });
   }
 }

@@ -10,15 +10,23 @@ export {
   type UserSummary,
 } from './schemas/auth';
 export {
+  commentSchema,
   prioritySchema,
+  statusChangeSchema,
   statusSchema,
+  ticketDetailSchema,
   ticketListQuerySchema,
   ticketListQueryString,
+  ticketParamsSchema,
   ticketSchema,
   userRefSchema,
+  type Comment,
   type Priority,
   type Status,
+  type StatusChange,
   type Ticket,
+  type TicketDetail,
   type TicketListQuery,
+  type TicketParams,
   type UserRef,
 } from './schemas/tickets';
