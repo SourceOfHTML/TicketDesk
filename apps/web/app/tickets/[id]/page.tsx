@@ -85,48 +85,50 @@ export default function TicketPage() {
 
       <div aria-busy={firstLoadInFlight ? true : undefined}>
         {ticket === null ? null : (
-          <article className="ticket" aria-labelledby="ticket-heading">
-            <h1 id="ticket-heading">{ticket.title}</h1>
-            <p className="ticket-description">{ticket.description}</p>
+          <>
+            <article className="ticket" aria-labelledby="ticket-heading">
+              <h1 id="ticket-heading">{ticket.title}</h1>
+              <p className="ticket-description">{ticket.description}</p>
 
-            <dl className="ticket-meta">
-              <dt>Status</dt>
-              <dd>
-                <span className={`badge badge-${ticket.status}`}>
-                  {STATUS_LABELS[ticket.status]}
-                </span>
-              </dd>
-              <dt>Priority</dt>
-              <dd>
-                <span className={`badge badge-${ticket.priority}`}>
-                  {PRIORITY_LABELS[ticket.priority]}
-                </span>
-              </dd>
-              <dt>Requester</dt>
-              <dd>{ticket.creator.email}</dd>
-              <dt>Assignee</dt>
-              <dd>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</dd>
-            </dl>
+              <dl className="ticket-meta">
+                <dt>Status</dt>
+                <dd>
+                  <span className={`badge badge-${ticket.status}`}>
+                    {STATUS_LABELS[ticket.status]}
+                  </span>
+                </dd>
+                <dt>Priority</dt>
+                <dd>
+                  <span className={`badge badge-${ticket.priority}`}>
+                    {PRIORITY_LABELS[ticket.priority]}
+                  </span>
+                </dd>
+                <dt>Requester</dt>
+                <dd>{ticket.creator.email}</dd>
+                <dt>Assignee</dt>
+                <dd>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</dd>
+              </dl>
 
-            <section className="ticket-section" aria-labelledby="comments-heading">
-              <h2 id="comments-heading">Comments</h2>
-              {ticket.comments.length === 0 ? (
-                <p>No comments yet.</p>
-              ) : (
-                <ul>
-                  {ticket.comments.map((comment) => (
-                    <li key={comment.id}>
-                      <p>{comment.body}</p>
-                      <p className="ticket-byline">
-                        {comment.author.email} · <Time iso={comment.createdAt} />
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+              <section className="ticket-comments" aria-labelledby="comments-heading">
+                <h2 id="comments-heading">Comments</h2>
+                {ticket.comments.length === 0 ? (
+                  <p>No comments yet.</p>
+                ) : (
+                  <ul role="list" className="comment-list">
+                    {ticket.comments.map((comment) => (
+                      <li key={comment.id}>
+                        <p className="comment-meta">
+                          <strong>{comment.author.email}</strong> · <Time iso={comment.createdAt} />
+                        </p>
+                        <p className="comment-body">{comment.body}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </article>
 
-            <section className="ticket-section" aria-labelledby="status-changes-heading">
+            <section className="ticket-history" aria-labelledby="status-changes-heading">
               <h2 id="status-changes-heading">Status changes</h2>
               {ticket.statusChanges.length === 0 ? (
                 <p>No status changes yet.</p>
@@ -146,7 +148,7 @@ export default function TicketPage() {
                 </ul>
               )}
             </section>
-          </article>
+          </>
         )}
       </div>
     </section>
