@@ -35,11 +35,62 @@ fieldset label {
   margin-right: 0.75rem;
 }
 
-/* Inherited, or a textarea and a select fall back to the browser's own fonts. */
+/* Inherited, or the fields fall back to the browser's own fonts. */
 input,
-textarea,
-select {
+textarea {
   font: inherit;
+}
+
+/* Fields take the full form width: a cramped box reads as an afterthought. */
+input[type='text'],
+input[type='password'],
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+}
+
+/* The description is a fixed seven-line box; dragging it only breaks the form. */
+textarea {
+  resize: none;
+}
+
+/* One field per line, its label above its control. */
+form > div {
+  margin-bottom: 1rem;
+}
+
+form label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+/* A radio's label sits beside its control, not above it. */
+form .radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0.75rem 0 0;
+}
+
+/* The affirmative action: green, roomy, and a size up. */
+button[type='submit'] {
+  padding: 0.65rem 1.5rem;
+  border: 1px solid #14532d;
+  border-radius: 0.3rem;
+  background: #166534;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+button[type='submit']:hover:not(:disabled) {
+  background: #14532d;
+}
+
+button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 table {

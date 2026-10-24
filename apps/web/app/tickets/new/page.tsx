@@ -4,7 +4,8 @@ import type { CreateTicketInput, Ticket } from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
-import { FormField, SelectField, TextAreaField } from '../../../components/form-field';
+import { FormField, RadioGroupField, TextAreaField } from '../../../components/form-field';
+import { PriorityBadge } from '../../../components/ticket-badges';
 import { sessionRequest } from '../../../lib/api';
 import { emptyFormErrors, normalizeError, type FormErrors } from '../../../lib/form-errors';
 import { PRIORITY_OPTIONS } from '../../../lib/ticket-labels';
@@ -12,6 +13,12 @@ import { useMutation } from '../../../lib/use-mutation';
 
 /** The only fields a message may be attached to on this form. */
 const TICKET_FIELDS = ['title', 'description', 'priority'] as const;
+
+/** Each Priority is drawn exactly as it will appear on the Ticket it produces. */
+const PRIORITY_CHOICES = PRIORITY_OPTIONS.map((option) => ({
+  value: option.value,
+  label: <PriorityBadge priority={option.value} />,
+}));
 
 export default function NewTicketPage() {
   const [values, setValues] = useState<CreateTicketInput>({
@@ -78,11 +85,11 @@ export default function NewTicketPage() {
           errors={errors.fields.description}
           disabled={mutation.pending}
         />
-        <SelectField
+        <RadioGroupField
           id="priority"
           label="Priority"
           value={values.priority}
-          options={PRIORITY_OPTIONS}
+          options={PRIORITY_CHOICES}
           onChange={(priority) => setValues((current) => ({ ...current, priority }))}
           errors={errors.fields.priority}
           disabled={mutation.pending}
