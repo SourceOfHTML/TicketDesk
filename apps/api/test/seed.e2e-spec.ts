@@ -28,18 +28,24 @@ describe('the seed script', () => {
     await prisma.$disconnect();
   });
 
-  it('creates the Staff account and can run again without duplicating it', async () => {
-    runSeed();
+  // Two Prisma CLI spawns plus argon2id, against every other file in parallel:
+  // slower than the suite's own timeout assumes, and slower still on CI.
+  it(
+    'creates the Staff account and can run again without duplicating it',
+    { timeout: 60_000 },
+    async () => {
+      runSeed();
 
-    const first = await prisma.user.findMany({ where: { role: 'STAFF' } });
-    expect(first).toHaveLength(1);
-    expect(first[0]?.email).toBe('staff@ticketdesk.local');
-    expect(first[0]?.passwordHash.startsWith('$argon2id$')).toBe(true);
+      const first = await prisma.user.findMany({ where: { role: 'STAFF' } });
+      expect(first).toHaveLength(1);
+      expect(first[0]?.email).toBe('staff@ticketdesk.local');
+      expect(first[0]?.passwordHash.startsWith('$argon2id$')).toBe(true);
 
-    runSeed();
+      runSeed();
 
-    const second = await prisma.user.findMany({ where: { role: 'STAFF' } });
-    expect(second).toHaveLength(1);
-    expect(second[0]?.id).toBe(first[0]?.id);
-  });
+      const second = await prisma.user.findMany({ where: { role: 'STAFF' } });
+      expect(second).toHaveLength(1);
+      expect(second[0]?.id).toBe(first[0]?.id);
+    },
+  );
 });

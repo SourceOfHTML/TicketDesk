@@ -7,6 +7,7 @@ import {
 import {
   UNASSIGNED_ASSIGNEE,
   commentSchema,
+  statusSchema,
   ticketDetailSchema,
   ticketSchema,
   type Comment,
@@ -17,11 +18,13 @@ import {
   type TicketListQuery,
   type UpdateAssigneeInput,
   type UpdatePriorityInput,
+  type UpdateStatusInput,
   type UserSummary,
 } from '@ticketdesk/shared';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { USER_REF } from '../users/user-ref';
+import { checkStatusTransition } from './status-transition';
 
 /** Every Ticket response embeds its Requester and Assignee, never whole Users. */
 const TICKET_INCLUDE = { creator: { select: USER_REF }, assignee: { select: USER_REF } } as const;
@@ -213,6 +216,52 @@ export class TicketsService {
     });
 
     return toTicket(ticket);
+  }
+
+  /**
+   * Moving a Ticket along its life. The rule decides legality and what the
+   * Status Change records; the Ticket and its audit entry move together or not
+   * at all, so the history can never disagree with the Status it explains.
+   */
+  async updateStatus(user: UserSummary, id: string, input: UpdateStatusInput): Promise<Ticket> {
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (ticket === null) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const from = statusSchema.parse(ticket.status);
+    const verdict = checkStatusTransition(from, input.status, user.role, input.reason);
+
+    if (!verdict.ok) {
+      if (verdict.refusal === 'not-staff') {
+        throw new ForbiddenException(verdict.message);
+      }
+
+      throw new BadRequestException(verdict.message);
+    }
+
+    const [, updated] = await this.prisma.$transaction([
+      this.prisma.statusChange.create({
+        data: {
+          ticketId: id,
+          fromStatus: from,
+          toStatus: input.status,
+          changedById: user.id,
+          reason: verdict.reason,
+        },
+      }),
+      this.prisma.ticket.update({
+        where: { id },
+        data: { status: input.status },
+        include: TICKET_INCLUDE,
+      }),
+    ]);
+
+    return toTicket(updated);
   }
 
   /** An absent Ticket is a 404 on every route that names one. */

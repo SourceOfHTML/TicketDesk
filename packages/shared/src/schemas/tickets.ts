@@ -94,6 +94,17 @@ export const updateAssigneeSchema = z.strictObject({
 });
 export type UpdateAssigneeInput = z.infer<typeof updateAssigneeSchema>;
 
+/**
+ * Moving a Ticket's Status. Which moves are legal — and whether the reason is
+ * required — is the domain's question, not the schema's. Only its length is
+ * here, because a Status Change records it verbatim.
+ */
+export const updateStatusSchema = z.strictObject({
+  status: statusSchema,
+  reason: z.string().max(2_048).optional(),
+});
+export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
+
 /** Any string is a well-formed id; an unknown one is a 404 from the service. */
 export const ticketParamsSchema = z.strictObject({
   id: z.string().min(1),

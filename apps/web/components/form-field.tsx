@@ -76,6 +76,51 @@ export function TextAreaField({
   );
 }
 
+interface SelectFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  /** An empty leading choice, so a select can start with nothing chosen. */
+  placeholder?: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+  errors?: string[];
+  disabled?: boolean;
+}
+
+export function SelectField({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+  errors = [],
+  disabled = false,
+}: SelectFieldProps) {
+  return (
+    <div>
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        name={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        {...fieldAria(id, errors)}
+      >
+        {placeholder === undefined ? null : <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <FieldErrors id={id} errors={errors} />
+    </div>
+  );
+}
+
 interface RadioGroupFieldProps<T extends string> {
   id: string;
   label: string;

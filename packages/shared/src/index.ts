@@ -24,6 +24,7 @@ export {
   ticketSchema,
   updateAssigneeSchema,
   updatePrioritySchema,
+  updateStatusSchema,
   userRefSchema,
   type Comment,
   type CreateCommentInput,
@@ -37,5 +38,6 @@ export {
   type TicketParams,
   type UpdateAssigneeInput,
   type UpdatePriorityInput,
+  type UpdateStatusInput,
   type UserRef,
 } from './schemas/tickets';

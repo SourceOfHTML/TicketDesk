@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
-import { TextAreaField } from '../../../components/form-field';
+import { FormField, SelectField, TextAreaField } from '../../../components/form-field';
 import { useSession } from '../../../components/session-provider';
 import { sessionRequest, type ApiResult } from '../../../lib/api';
 import { emptyFormErrors, normalizeError, type FormErrors } from '../../../lib/form-errors';
-import { PRIORITY_OPTIONS, STATUS_LABELS } from '../../../lib/ticket-labels';
+import { PRIORITY_OPTIONS, STATUS_LABELS, STATUS_OPTIONS } from '../../../lib/ticket-labels';
 import { PriorityBadge, StatusBadge } from '../../../components/ticket-badges';
 import { useMutation } from '../../../lib/use-mutation';
 
@@ -237,8 +237,9 @@ interface StaffPanelProps {
 }
 
 /**
- * Staff-only: the two direct PATCH controls, each freezing only itself. The
- * panel is presentation; the API refuses a Requester whatever the UI renders.
+ * Staff-only: the two direct PATCH controls, each freezing only itself, and the
+ * status form, which freezes as a whole. The panel is presentation; the API
+ * refuses a Requester whatever the UI renders.
  */
 function StaffPanel({ ticket, staff, directoryFailure, onChanged }: StaffPanelProps) {
   // Everyone the picker may name. The current Assignee is always present, even
@@ -296,6 +297,8 @@ function StaffPanel({ ticket, staff, directoryFailure, onChanged }: StaffPanelPr
         }
         onSaved={onChanged}
       />
+
+      <StatusForm ticket={ticket} onChanged={onChanged} />
     </section>
   );
 }
@@ -352,20 +355,14 @@ function StaffControl({
 
   return (
     <div className="staff-control" aria-busy={mutation.pending ? true : undefined}>
-      <label htmlFor={id}>{label}</label>
-      <select
+      <SelectField
         id={id}
-        name={id}
+        label={label}
         value={value}
+        options={options}
+        onChange={(next) => void onChange(next)}
         disabled={mutation.pending || disabled}
-        onChange={(event) => void onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
       {errors === null ? null : (
         <ErrorBanner
           messages={errors.banner}
@@ -373,6 +370,101 @@ function StaffControl({
         />
       )}
     </div>
+  );
+}
+
+/** The only fields a message may be attached to on the status form. */
+const STATUS_FORM_FIELDS = ['status', 'reason'] as const;
+
+interface StatusFormProps {
+  ticket: TicketDetail;
+  /** Refetches the Ticket, so the history shows the move the server recorded. */
+  onChanged: () => void;
+}
+
+/**
+ * Staff-only: one form for the whole move. The select offers all four Statuses
+ * from a placeholder and knows no transition table — an illegal target is the
+ * API's 400 in the banner, not a hidden option here. The whole form freezes
+ * while writing, so one submission can never record two transitions.
+ */
+function StatusForm({ ticket, onChanged }: StatusFormProps) {
+  const [status, setStatus] = useState('');
+  const [reason, setReason] = useState('');
+  const [errors, setErrors] = useState<FormErrors>(emptyFormErrors);
+
+  // The reason is asked for only where the rule demands one: a closed Ticket
+  // coming back. A hidden field is never sent, so no other move carries it.
+  const reasonRequired = ticket.status === 'closed' && status === 'open';
+
+  const mutation = useMutation(
+    () =>
+      sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(reasonRequired ? { status, reason } : { status }),
+      }),
+    {
+      // Only a recorded move clears the form; a refusal leaves the chosen
+      // Status and any typed reason exactly where they were.
+      onSuccess: () => {
+        setStatus('');
+        setReason('');
+        onChanged();
+      },
+    },
+  );
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+
+    if (mutation.pending || status === '') {
+      return;
+    }
+
+    setErrors(emptyFormErrors());
+    const result = await mutation.run();
+
+    if (result !== undefined && !result.ok) {
+      setErrors(normalizeError(result.error, STATUS_FORM_FIELDS));
+    }
+  }
+
+  return (
+    <form
+      className="staff-control"
+      onSubmit={onSubmit}
+      noValidate
+      aria-busy={mutation.pending ? true : undefined}
+    >
+      <ErrorBanner
+        messages={errors.banner}
+        details={errors.statusCode >= 500 ? errors.details : undefined}
+      />
+      <SelectField
+        id="staff-status"
+        label="Status"
+        value={status}
+        placeholder="Change status…"
+        options={STATUS_OPTIONS}
+        onChange={setStatus}
+        errors={errors.fields.status}
+        disabled={mutation.pending}
+      />
+      {reasonRequired ? (
+        <FormField
+          id="staff-status-reason"
+          label="Reason for re-opening"
+          value={reason}
+          onChange={setReason}
+          errors={errors.fields.reason}
+          disabled={mutation.pending}
+        />
+      ) : null}
+      <button type="submit" disabled={mutation.pending || status === ''}>
+        Update status
+      </button>
+    </form>
   );
 }
 
