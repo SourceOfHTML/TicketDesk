@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { createActor } from './actors';
+import { createActor, type Actor } from './actors';
 import { createTestApp, resetDb } from './app';
 import { createTicket } from './tickets';
 
@@ -50,16 +50,16 @@ describe('POST /api/tickets/:id/comments', () => {
   });
 
   describe('by actor', () => {
-    let owner: Awaited<ReturnType<typeof createActor>>;
-    let otherRequester: Awaited<ReturnType<typeof createActor>>;
-    let staff: Awaited<ReturnType<typeof createActor>>;
+    let requester: Actor;
+    let otherRequester: Actor;
+    let staff: Actor;
     let path: string;
 
     beforeEach(async () => {
-      owner = await createActor(app);
+      requester = await createActor(app);
       otherRequester = await createActor(app);
       staff = await createActor(app, 'STAFF');
-      const ticket = await createTicket(app, { creatorId: owner.user.id });
+      const ticket = await createTicket(app, { creatorId: requester.user.id });
       path = `/api/tickets/${ticket.id}/comments`;
     });
 
@@ -68,7 +68,7 @@ describe('POST /api/tickets/:id/comments', () => {
     });
 
     it('the Requester who raised it: 201', async () => {
-      await owner.agent.post(path).send({ body: 'Hello?' }).expect(201);
+      await requester.agent.post(path).send({ body: 'Hello?' }).expect(201);
     });
 
     it('another Requester: 403, and no Comment is written', async () => {
@@ -175,11 +175,22 @@ describe('POST /api/tickets/:id/comments', () => {
 
     const detail = await requester.agent.get(`/api/tickets/${ticket.id}`).expect(200);
 
-    expect(detail.body.comments.map((comment: { body: string }) => comment.body)).toEqual([
-      'Any news?',
-      'On it.',
-    ]);
-    expect(detail.body.comments[1].author).toEqual({ id: staff.user.id, email: staff.user.email });
+    // Two posts can share a millisecond, so their relative order is not this
+    // test's to assert; the ascending contract is covered with fixed times in
+    // the detail spec. What matters here is that both landed with their authors.
+    expect(detail.body.comments).toHaveLength(2);
+    expect(detail.body.comments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          body: 'Any news?',
+          author: { id: requester.user.id, email: requester.user.email },
+        }),
+        expect.objectContaining({
+          body: 'On it.',
+          author: { id: staff.user.id, email: staff.user.email },
+        }),
+      ]),
+    );
   });
 
   it('offers no edit or delete route for a Comment', async () => {

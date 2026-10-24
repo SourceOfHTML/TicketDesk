@@ -98,9 +98,7 @@ export class TicketsService {
       throw new NotFoundException('Ticket not found');
     }
 
-    if (user.role !== 'STAFF' && ticket.creatorId !== user.id) {
-      throw new ForbiddenException('Forbidden');
-    }
+    this.assertVisible(user, ticket);
 
     return ticketDetailSchema.parse({
       ...toTicket(ticket),
@@ -130,9 +128,7 @@ export class TicketsService {
       throw new NotFoundException('Ticket not found');
     }
 
-    if (user.role !== 'STAFF' && ticket.creatorId !== user.id) {
-      throw new ForbiddenException('Forbidden');
-    }
+    this.assertVisible(user, ticket);
 
     // `closed` is the end of a Ticket's life; `resolved` only pauses it. The
     // composer's absence is a courtesy — this is the enforcement.
@@ -146,5 +142,12 @@ export class TicketsService {
     });
 
     return commentSchema.parse({ ...comment, createdAt: comment.createdAt.toISOString() });
+  }
+
+  /** The one visibility rule: a Ticket's Requester or any Staff member. */
+  private assertVisible(user: UserSummary, ticket: { creatorId: string }): void {
+    if (user.role !== 'STAFF' && ticket.creatorId !== user.id) {
+      throw new ForbiddenException('Forbidden');
+    }
   }
 }
