@@ -68,25 +68,68 @@ td {
   margin: 0;
 }
 
-/* Each section owns its separator, so the frame needs no inner wrappers. */
-.ticket-section {
-  margin-top: 1.25rem;
+/* The thread sits apart from the facts: a heavier rule and more air. */
+.ticket-comments {
+  margin-top: 2rem;
   padding-top: 1.25rem;
+  border-top: 2px solid #d4d4d4;
+}
+
+.ticket-comments h2 {
+  margin: 0 0 0.75rem;
+}
+
+.comment-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comment-list li + li {
+  margin-top: 1rem;
+}
+
+/* Author and time lead the Comment, so the body reads as what they said. */
+.comment-meta {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.9em;
+}
+
+.comment-meta strong {
+  color: #111827;
+}
+
+.comment-body {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
+
+/* The audit trail is the last thing a reader checks, so it stays outside the
+   frame and a size down. */
+.ticket-history {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
   border-top: 1px solid #d4d4d4;
+  font-size: 0.9em;
 }
 
-.ticket-section h2 {
+.ticket-history h2 {
   margin: 0 0 0.5rem;
+  font-size: 1em;
 }
 
-.ticket-section ul {
+.ticket-history ul {
   margin: 0;
   padding-left: 1.1rem;
 }
 
+.ticket-history p {
+  margin: 0.15rem 0;
+}
+
 .ticket-byline {
   color: #4b5563;
-  font-size: 0.9em;
 }
 
 .badge {
