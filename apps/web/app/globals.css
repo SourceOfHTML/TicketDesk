@@ -55,6 +55,42 @@ textarea {
   resize: none;
 }
 
+/* An invalid control says so before the reader reaches its message. */
+input[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border: 1px solid #b91c1c;
+}
+
+/* Errors are one block, not bullets to hunt for: tinted, bordered, and close
+   to the field they belong to. */
+.field-errors,
+[role='alert'] {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #b91c1c;
+  background: #fef2f2;
+  color: #991b1b;
+  list-style: none;
+}
+
+/* Beside its field, not floating away from it. */
+.field-errors {
+  margin: 0.35rem 0 0;
+}
+
+/* Above the form it summarizes, with room before the form starts. */
+[role='alert'] {
+  margin: 0 0 1rem;
+}
+
+.field-errors li + li,
+[role='alert'] p + p {
+  margin-top: 0.25rem;
+}
+
+[role='alert'] p {
+  margin: 0;
+}
+
 /* One field per line, its label above its control. */
 form > div {
   margin-bottom: 1rem;
