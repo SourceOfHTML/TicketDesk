@@ -4,14 +4,10 @@ import { ticketListQueryString, type Ticket, type TicketListQuery } from '@ticke
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
+import { PriorityBadge, StatusBadge } from '../../components/ticket-badges';
 import { sessionRequest } from '../../lib/api';
 import { normalizeError, type FormErrors } from '../../lib/form-errors';
-import {
-  PRIORITY_LABELS,
-  PRIORITY_OPTIONS,
-  STATUS_LABELS,
-  STATUS_OPTIONS,
-} from '../../lib/ticket-labels';
+import { PRIORITY_OPTIONS, STATUS_OPTIONS } from '../../lib/ticket-labels';
 
 /** The shared query's shape, with both filters always present. */
 type Filters = Required<TicketListQuery>;
@@ -173,14 +169,10 @@ export default function TicketsPage() {
                     <Link href={`/tickets/${ticket.id}`}>{ticket.title}</Link>
                   </td>
                   <td>
-                    <span className={`badge badge-${ticket.status}`}>
-                      {STATUS_LABELS[ticket.status]}
-                    </span>
+                    <StatusBadge status={ticket.status} />
                   </td>
                   <td>
-                    <span className={`badge badge-${ticket.priority}`}>
-                      {PRIORITY_LABELS[ticket.priority]}
-                    </span>
+                    <PriorityBadge priority={ticket.priority} />
                   </td>
                 </tr>
               ))

@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
 import { sessionRequest } from '../../../lib/api';
 import { normalizeError, type FormErrors } from '../../../lib/form-errors';
-import { PRIORITY_LABELS, STATUS_LABELS } from '../../../lib/ticket-labels';
+import { STATUS_LABELS } from '../../../lib/ticket-labels';
+import { PriorityBadge, StatusBadge } from '../../../components/ticket-badges';
 
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
@@ -93,15 +94,11 @@ export default function TicketPage() {
               <dl className="ticket-meta">
                 <dt>Status</dt>
                 <dd>
-                  <span className={`badge badge-${ticket.status}`}>
-                    {STATUS_LABELS[ticket.status]}
-                  </span>
+                  <StatusBadge status={ticket.status} />
                 </dd>
                 <dt>Priority</dt>
                 <dd>
-                  <span className={`badge badge-${ticket.priority}`}>
-                    {PRIORITY_LABELS[ticket.priority]}
-                  </span>
+                  <PriorityBadge priority={ticket.priority} />
                 </dd>
                 <dt>Requester</dt>
                 <dd>{ticket.creator.email}</dd>

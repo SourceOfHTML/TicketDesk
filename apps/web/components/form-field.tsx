@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 interface FormFieldProps {
   id: string;
   label: string;
@@ -64,7 +66,7 @@ export function TextAreaField({
         id={id}
         name={id}
         value={value}
-        rows={6}
+        rows={7}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         {...fieldAria(id, errors)}
@@ -74,17 +76,18 @@ export function TextAreaField({
   );
 }
 
-interface SelectFieldProps<T extends string> {
+interface RadioGroupFieldProps<T extends string> {
   id: string;
   label: string;
   value: T;
-  options: ReadonlyArray<{ value: T; label: string }>;
+  /** A node, so a caller can render each option as the same badge a page shows. */
+  options: ReadonlyArray<{ value: T; label: ReactNode }>;
   onChange: (value: T) => void;
   errors?: string[];
   disabled?: boolean;
 }
 
-export function SelectField<T extends string>({
+export function RadioGroupField<T extends string>({
   id,
   label,
   value,
@@ -92,26 +95,25 @@ export function SelectField<T extends string>({
   onChange,
   errors = [],
   disabled = false,
-}: SelectFieldProps<T>) {
+}: RadioGroupFieldProps<T>) {
   return (
-    <div>
-      <label htmlFor={id}>{label}</label>
-      <select
-        id={id}
-        name={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value as T)}
-        disabled={disabled}
-        {...fieldAria(id, errors)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+    <fieldset className="radio-group" {...fieldAria(id, errors)}>
+      <legend>{label}</legend>
+      {options.map((option) => (
+        <label key={option.value}>
+          <input
+            type="radio"
+            name={id}
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+            disabled={disabled}
+          />
+          {option.label}
+        </label>
+      ))}
       <FieldErrors id={id} errors={errors} />
-    </div>
+    </fieldset>
   );
 }
 
