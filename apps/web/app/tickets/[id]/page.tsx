@@ -434,19 +434,23 @@ interface StatusFormProps {
 
 /**
  * Staff-only: one form for the whole move. The radio group offers all four
- * Statuses with none chosen and knows no rule about which moves are legal — an
- * illegal target is the API's 400 in the banner, not a hidden option here. The
- * whole form freezes while writing, so one submission can never record two
- * Status Changes.
+ * Statuses, with the Ticket's current one chosen, and knows no rule about which
+ * moves are legal — an illegal target is the API's 400 in the banner, not a
+ * hidden option here. The whole form freezes while writing, so one submission
+ * can never record two Status Changes.
  */
 function StatusForm({ ticket, onChanged }: StatusFormProps) {
-  const [status, setStatus] = useState<Status | ''>('');
+  // The group starts on the Status the Ticket is in, and follows it whenever a
+  // move is recorded. A refusal leaves the chosen target where it was.
+  const [status, setStatus] = useState<Status>(ticket.status);
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<FormErrors>(emptyFormErrors);
 
   // The reason is asked for only where the rule demands one: a closed Ticket
   // coming back. A hidden field is never sent, so no other move carries it.
   const reasonRequired = ticket.status === 'closed' && status === 'open';
+  // Re-picking the current Status changes nothing, so there is no move to send.
+  const unchanged = status === ticket.status;
 
   const mutation = useMutation(
     () =>
@@ -456,10 +460,10 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
         body: JSON.stringify(reasonRequired ? { status, reason } : { status }),
       }),
     {
-      // Only a recorded move clears the form; a refusal leaves the chosen
-      // Status and any typed reason exactly where they were.
-      onSuccess: () => {
-        setStatus('');
+      // Only a recorded move clears the reason and settles on the server's new
+      // Status; a refusal leaves the chosen target and the typed reason.
+      onSuccess: (updated) => {
+        setStatus(updated.status);
         setReason('');
         onChanged();
       },
@@ -469,7 +473,7 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    if (mutation.pending) {
+    if (mutation.pending || unchanged) {
       return;
     }
 
@@ -517,7 +521,7 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
           ariaRequired
         />
       ) : null}
-      <button type="submit" disabled={mutation.pending}>
+      <button type="submit" disabled={mutation.pending || unchanged}>
         Update status
       </button>
     </form>
