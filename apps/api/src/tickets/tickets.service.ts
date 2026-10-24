@@ -14,14 +14,26 @@ import { PrismaService } from '../prisma/prisma.service';
 /** User summaries carry these fields and no others — never a password hash. */
 const USER_REF = { id: true, email: true } as const;
 
+/** Every Ticket response embeds its Requester and Assignee, never whole Users. */
+const TICKET_INCLUDE = { creator: { select: USER_REF }, assignee: { select: USER_REF } } as const;
+
+/** One Ticket's wire shape, whether it came from a list, a create or a detail. */
+function toTicket(ticket: Prisma.TicketGetPayload<{ include: typeof TICKET_INCLUDE }>): Ticket {
+  return ticketSchema.parse({
+    ...ticket,
+    createdAt: ticket.createdAt.toISOString(),
+    updatedAt: ticket.updatedAt.toISOString(),
+  });
+}
+
 @Injectable()
 export class TicketsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Raising a Ticket never writes a Status Change: a new Ticket is `open` by
-   * definition, and `createdAt` already records when. The caller owns it,
-   * whether they are a Requester or Staff.
+   * definition, and `createdAt` already records when. Its Requester is the
+   * caller, whichever Role they hold.
    */
   async create(user: UserSummary, input: CreateTicketInput): Promise<Ticket> {
     const ticket = await this.prisma.ticket.create({
@@ -32,14 +44,10 @@ export class TicketsService {
         status: 'open',
         creatorId: user.id,
       },
-      include: { creator: { select: USER_REF }, assignee: { select: USER_REF } },
+      include: TICKET_INCLUDE,
     });
 
-    return ticketSchema.parse({
-      ...ticket,
-      createdAt: ticket.createdAt.toISOString(),
-      updatedAt: ticket.updatedAt.toISOString(),
-    });
+    return toTicket(ticket);
   }
 
   /**
@@ -56,16 +64,10 @@ export class TicketsService {
     const tickets = await this.prisma.ticket.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { creator: { select: USER_REF }, assignee: { select: USER_REF } },
+      include: TICKET_INCLUDE,
     });
 
-    return tickets.map((ticket) =>
-      ticketSchema.parse({
-        ...ticket,
-        createdAt: ticket.createdAt.toISOString(),
-        updatedAt: ticket.updatedAt.toISOString(),
-      }),
-    );
+    return tickets.map(toTicket);
   }
 
   /**
@@ -77,8 +79,7 @@ export class TicketsService {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       include: {
-        creator: { select: USER_REF },
-        assignee: { select: USER_REF },
+        ...TICKET_INCLUDE,
         comments: {
           orderBy: { createdAt: 'asc' },
           include: { author: { select: USER_REF } },
@@ -99,9 +100,7 @@ export class TicketsService {
     }
 
     return ticketDetailSchema.parse({
-      ...ticket,
-      createdAt: ticket.createdAt.toISOString(),
-      updatedAt: ticket.updatedAt.toISOString(),
+      ...toTicket(ticket),
       comments: ticket.comments.map((comment) => ({
         ...comment,
         createdAt: comment.createdAt.toISOString(),

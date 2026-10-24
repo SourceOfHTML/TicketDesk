@@ -1,28 +1,20 @@
 'use client';
 
-import type { Priority, Ticket } from '@ticketdesk/shared';
+import type { CreateTicketInput, Ticket } from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
 import { FormField, SelectField, TextAreaField } from '../../../components/form-field';
 import { sessionRequest } from '../../../lib/api';
 import { emptyFormErrors, normalizeError, type FormErrors } from '../../../lib/form-errors';
-import { optionsOf, PRIORITY_LABELS } from '../../../lib/ticket-labels';
+import { PRIORITY_OPTIONS } from '../../../lib/ticket-labels';
 import { useMutation } from '../../../lib/use-mutation';
 
 /** The only fields a message may be attached to on this form. */
 const TICKET_FIELDS = ['title', 'description', 'priority'] as const;
 
-const PRIORITY_OPTIONS = optionsOf(PRIORITY_LABELS);
-
-interface FormValues {
-  title: string;
-  description: string;
-  priority: Priority;
-}
-
 export default function NewTicketPage() {
-  const [values, setValues] = useState<FormValues>({
+  const [values, setValues] = useState<CreateTicketInput>({
     title: '',
     description: '',
     priority: 'medium',
