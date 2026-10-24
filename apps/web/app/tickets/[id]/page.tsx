@@ -1,11 +1,16 @@
 'use client';
 
-import type { Comment, Ticket, TicketDetail, UserRef } from '@ticketdesk/shared';
+import type { Comment, Status, Ticket, TicketDetail, UserRef } from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
-import { FormField, SelectField, TextAreaField } from '../../../components/form-field';
+import {
+  FormField,
+  RadioGroupField,
+  SelectField,
+  TextAreaField,
+} from '../../../components/form-field';
 import { useSession } from '../../../components/session-provider';
 import { sessionRequest, type ApiResult } from '../../../lib/api';
 import { emptyFormErrors, normalizeError, type FormErrors } from '../../../lib/form-errors';
@@ -15,6 +20,18 @@ import { useMutation } from '../../../lib/use-mutation';
 
 /** The only form field a Comment's errors may be attached to. */
 const COMMENT_FIELDS = ['body'] as const;
+
+/** Each Priority is drawn exactly as the raise form draws it. */
+const PRIORITY_CHOICES = PRIORITY_OPTIONS.map((option) => ({
+  value: option.value,
+  label: <PriorityBadge priority={option.value} />,
+}));
+
+/** Each Status is drawn exactly as the Ticket itself shows it. */
+const STATUS_CHOICES = STATUS_OPTIONS.map((option) => ({
+  value: option.value,
+  label: <StatusBadge status={option.value} />,
+}));
 
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
@@ -265,24 +282,9 @@ function StaffPanel({ ticket, staff, directoryFailure, onChanged }: StaffPanelPr
         />
       )}
 
-      <StaffControl
-        id="staff-priority"
-        label="Priority"
-        value={ticket.priority}
-        options={PRIORITY_OPTIONS}
-        save={(priority) =>
-          sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/priority`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ priority }),
-          })
-        }
-        onSaved={onChanged}
-      />
+      <PriorityControl ticket={ticket} onChanged={onChanged} />
 
-      <StaffControl
-        id="staff-assignee"
-        label="Assignee"
+      <AssigneeControl
         value={ticket.assignee?.id ?? ''}
         options={assigneeOptions}
         // Without the directory the picker can only offer the current Assignee
@@ -303,32 +305,23 @@ function StaffPanel({ ticket, staff, directoryFailure, onChanged }: StaffPanelPr
   );
 }
 
-interface StaffControlProps {
-  id: string;
-  label: string;
-  /** The Ticket's current value. The select always shows the server's answer. */
-  value: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  disabled?: boolean;
-  /** One chosen value, written by a direct PATCH. */
-  save: (value: string) => Promise<ApiResult<Ticket>>;
-  onSaved: () => void;
+interface DirectWrite<T> {
+  write: (next: T) => Promise<void>;
+  pending: boolean;
+  errors: FormErrors | null;
 }
 
 /**
- * One direct PATCH control. The chosen value goes into a ref so the write in
- * this same event sees it; the select stays bound to the Ticket, so a failure
- * leaves the current value visible and a success swaps it after the refetch.
+ * The one direct-write lifecycle. The chosen value goes into a ref so the write
+ * in this same event sees it; the control stays bound to the Ticket, so a
+ * failure leaves the server's value visible and a success swaps it after the
+ * refetch.
  */
-function StaffControl({
-  id,
-  label,
-  value,
-  options,
-  disabled = false,
-  save,
-  onSaved,
-}: StaffControlProps) {
+function useDirectWrite<T>(
+  value: T,
+  save: (value: T) => Promise<ApiResult<Ticket>>,
+  onSaved: () => void,
+): DirectWrite<T> {
   const [errors, setErrors] = useState<FormErrors | null>(null);
   const pendingValue = useRef(value);
 
@@ -339,7 +332,7 @@ function StaffControl({
     },
   });
 
-  async function onChange(next: string): Promise<void> {
+  async function write(next: T): Promise<void> {
     if (mutation.pending) {
       return;
     }
@@ -353,22 +346,79 @@ function StaffControl({
     }
   }
 
+  return { write, pending: mutation.pending, errors };
+}
+
+/** A direct write's failure, in the banner its control renders beside it. */
+function DirectWriteFailure({ errors }: { errors: FormErrors | null }) {
+  if (errors === null) {
+    return null;
+  }
+
   return (
-    <div className="staff-control" aria-busy={mutation.pending ? true : undefined}>
+    <ErrorBanner
+      messages={errors.banner}
+      details={errors.statusCode >= 500 ? errors.details : undefined}
+    />
+  );
+}
+
+/**
+ * Staff-only: Priority as the same radio group and badges the raise form
+ * offers. One choice writes immediately; the group stays bound to the Ticket.
+ */
+function PriorityControl({ ticket, onChanged }: { ticket: TicketDetail; onChanged: () => void }) {
+  const { write, pending, errors } = useDirectWrite(
+    ticket.priority,
+    (priority) =>
+      sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/priority`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ priority }),
+      }),
+    onChanged,
+  );
+
+  return (
+    <div className="staff-control" aria-busy={pending ? true : undefined}>
+      <RadioGroupField
+        id="staff-priority"
+        label="Priority"
+        value={ticket.priority}
+        options={PRIORITY_CHOICES}
+        onChange={(priority) => void write(priority)}
+        disabled={pending}
+      />
+      <DirectWriteFailure errors={errors} />
+    </div>
+  );
+}
+
+interface AssigneeControlProps {
+  /** The Ticket's current Assignee, or `''` for none. */
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  disabled: boolean;
+  /** One chosen value, written by a direct PATCH. */
+  save: (value: string) => Promise<ApiResult<Ticket>>;
+  onSaved: () => void;
+}
+
+/** Staff-only: naming the Assignee, or leaving the Ticket unassigned. */
+function AssigneeControl({ value, options, disabled, save, onSaved }: AssigneeControlProps) {
+  const { write, pending, errors } = useDirectWrite(value, save, onSaved);
+
+  return (
+    <div className="staff-control" aria-busy={pending ? true : undefined}>
       <SelectField
-        id={id}
-        label={label}
+        id="staff-assignee"
+        label="Assignee"
         value={value}
         options={options}
-        onChange={(next) => void onChange(next)}
-        disabled={mutation.pending || disabled}
+        onChange={(next) => void write(next)}
+        disabled={pending || disabled}
       />
-      {errors === null ? null : (
-        <ErrorBanner
-          messages={errors.banner}
-          details={errors.statusCode >= 500 ? errors.details : undefined}
-        />
-      )}
+      <DirectWriteFailure errors={errors} />
     </div>
   );
 }
@@ -383,14 +433,14 @@ interface StatusFormProps {
 }
 
 /**
- * Staff-only: one form for the whole move. The select offers all four Statuses
- * from a placeholder and knows no rule about which moves are legal — an illegal
- * target is the API's 400 in the banner, not a hidden option here. The whole
- * form freezes while writing, so one submission can never record two Status
- * Changes.
+ * Staff-only: one form for the whole move. The radio group offers all four
+ * Statuses with none chosen and knows no rule about which moves are legal — an
+ * illegal target is the API's 400 in the banner, not a hidden option here. The
+ * whole form freezes while writing, so one submission can never record two
+ * Status Changes.
  */
 function StatusForm({ ticket, onChanged }: StatusFormProps) {
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState<Status | ''>('');
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<FormErrors>(emptyFormErrors);
 
@@ -419,7 +469,7 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    if (mutation.pending || status === '') {
+    if (mutation.pending) {
       return;
     }
 
@@ -445,12 +495,11 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
         messages={errors.banner}
         details={errors.statusCode >= 500 ? errors.details : undefined}
       />
-      <SelectField
+      <RadioGroupField
         id="staff-status"
         label="Status"
         value={status}
-        placeholder="Change status…"
-        options={STATUS_OPTIONS}
+        options={STATUS_CHOICES}
         onChange={setStatus}
         errors={errors.fields.status}
         disabled={mutation.pending}
@@ -468,7 +517,7 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
           ariaRequired
         />
       ) : null}
-      <button type="submit" disabled={mutation.pending || status === ''}>
+      <button type="submit" disabled={mutation.pending}>
         Update status
       </button>
     </form>
