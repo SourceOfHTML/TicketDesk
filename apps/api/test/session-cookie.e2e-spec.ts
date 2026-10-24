@@ -1,25 +1,9 @@
-import { Controller, Get, UseGuards, type INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/app.setup';
-import { Roles, RolesGuard } from '../src/auth/roles.guard';
-import { SessionGuard } from '../src/auth/session.guard';
 import { createActor } from './actors';
-import { resetDb } from './app';
+import { createTestApp, resetDb } from './app';
 import { setCookies } from './cookies';
-
-/** A Staff-only route used only to observe a 403's cookie, until real ones exist. */
-@Controller('staff-only')
-class StaffOnlyController {
-  @Get()
-  @UseGuards(SessionGuard, RolesGuard)
-  @Roles('STAFF')
-  read(): { ok: true } {
-    return { ok: true };
-  }
-}
 
 interface ParsedSetCookie {
   name: string;
@@ -74,14 +58,7 @@ describe('the session cookie', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-      controllers: [StaffOnlyController],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createTestApp();
   });
 
   afterAll(async () => {
@@ -117,7 +94,7 @@ describe('the session cookie', () => {
     const actor = await createActor(app, 'USER');
     const token = sessionCookies(actor.loginResponse)[0]?.value;
 
-    const forbidden = await actor.agent.get('/api/staff-only').expect(403);
+    const forbidden = await actor.agent.get('/api/staff').expect(403);
 
     const cookies = sessionCookies(forbidden);
     expect(cookies).toHaveLength(1);

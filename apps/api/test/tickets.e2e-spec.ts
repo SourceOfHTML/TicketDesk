@@ -175,6 +175,100 @@ describe('GET /api/tickets', () => {
     );
   });
 
+  it('filters Staff by any of several Assignees and combines it with Status and Priority', async () => {
+    const requester = await createActor(app);
+    const staff = await createActor(app, 'STAFF');
+    const otherStaff = await createActor(app, 'STAFF');
+
+    await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: staff.user.id,
+      title: 'Staff, open, high',
+      status: 'open',
+      priority: 'high',
+    });
+    await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: otherStaff.user.id,
+      title: 'Other Staff, open, high',
+      status: 'open',
+      priority: 'high',
+    });
+    await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: staff.user.id,
+      title: 'Staff, closed, low',
+      status: 'closed',
+      priority: 'low',
+    });
+    await createTicket(app, {
+      creatorId: requester.user.id,
+      title: 'Unassigned, open, medium',
+      status: 'open',
+      priority: 'medium',
+    });
+
+    const titles = (body: Array<{ title: string }>) => body.map((ticket) => ticket.title).sort();
+
+    const byAssignee = await staff.agent
+      .get(`/api/tickets?assigneeId=${staff.user.id},${otherStaff.user.id}`)
+      .expect(200);
+    expect(titles(byAssignee.body)).toEqual([
+      'Other Staff, open, high',
+      'Staff, closed, low',
+      'Staff, open, high',
+    ]);
+
+    const withStatus = await staff.agent
+      .get(`/api/tickets?assigneeId=${staff.user.id}&status=open`)
+      .expect(200);
+    expect(titles(withStatus.body)).toEqual(['Staff, open, high']);
+
+    const withPriority = await staff.agent
+      .get(`/api/tickets?assigneeId=${staff.user.id},${otherStaff.user.id}&priority=high`)
+      .expect(200);
+    expect(titles(withPriority.body)).toEqual(['Other Staff, open, high', 'Staff, open, high']);
+
+    const allThree = await staff.agent
+      .get(
+        `/api/tickets?assigneeId=${staff.user.id},${otherStaff.user.id}&status=open&priority=high`,
+      )
+      .expect(200);
+    expect(titles(allThree.body)).toEqual(['Other Staff, open, high', 'Staff, open, high']);
+
+    // The unassigned Ticket still matches filters that do not mention an Assignee.
+    const byPriority = await staff.agent.get('/api/tickets?priority=medium').expect(200);
+    expect(titles(byPriority.body)).toEqual(['Unassigned, open, medium']);
+
+    const unfiltered = await staff.agent.get('/api/tickets').expect(200);
+    expect(unfiltered.body).toHaveLength(4);
+  });
+
+  it("refuses a Requester's assigneeId rather than ignoring it, and honours their other filters", async () => {
+    const requester = await createActor(app);
+    const staff = await createActor(app, 'STAFF');
+
+    await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: staff.user.id,
+      title: 'Mine, open',
+      status: 'open',
+    });
+    await createTicket(app, {
+      creatorId: requester.user.id,
+      title: 'Mine, closed',
+      status: 'closed',
+    });
+
+    const refused = await requester.agent
+      .get(`/api/tickets?assigneeId=${staff.user.id}`)
+      .expect(403);
+    expect(refused.body).toEqual({ statusCode: 403, message: 'Staff only', error: 'Forbidden' });
+
+    const filtered = await requester.agent.get('/api/tickets?status=open').expect(200);
+    expect(filtered.body.map((ticket: { title: string }) => ticket.title)).toEqual(['Mine, open']);
+  });
+
   it('rejects malformed filter values with the validation envelope', async () => {
     const requester = await createActor(app);
 
