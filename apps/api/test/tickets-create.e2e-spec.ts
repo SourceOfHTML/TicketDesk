@@ -5,6 +5,13 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { createActor } from './actors';
 import { createTestApp, resetDb } from './app';
 
+/** A valid body; each test names only the field it is about. */
+const TICKET_BODY = {
+  title: 'Printer on fire',
+  description: 'It is genuinely alight.',
+  priority: 'medium',
+} as const;
+
 describe('POST /api/tickets', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -22,22 +29,18 @@ describe('POST /api/tickets', () => {
     await resetDb(app);
   });
 
-  it('creates an open Ticket owned by the caller and returns it', async () => {
+  it('creates an open Ticket raised by the caller and returns it', async () => {
     const requester = await createActor(app);
 
     const response = await requester.agent
       .post('/api/tickets')
-      .send({
-        title: 'Printer on fire',
-        description: 'It is genuinely alight.',
-        priority: 'high',
-      })
+      .send({ ...TICKET_BODY, priority: 'high' })
       .expect(201);
 
     expect(response.body).toMatchObject({
       id: expect.any(String),
-      title: 'Printer on fire',
-      description: 'It is genuinely alight.',
+      title: TICKET_BODY.title,
+      description: TICKET_BODY.description,
       priority: 'high',
       status: 'open',
       creator: { id: requester.user.id, email: requester.user.email },
@@ -48,7 +51,7 @@ describe('POST /api/tickets', () => {
     const stored = await prisma.ticket.findUnique({ where: { id: response.body.id } });
 
     expect(stored).toMatchObject({
-      title: 'Printer on fire',
+      title: TICKET_BODY.title,
       creatorId: requester.user.id,
       status: 'open',
       assigneeId: null,
@@ -58,10 +61,7 @@ describe('POST /api/tickets', () => {
   it('opens the new Ticket with no Comments and no Status Changes', async () => {
     const requester = await createActor(app);
 
-    const created = await requester.agent
-      .post('/api/tickets')
-      .send({ title: 'Printer on fire', description: 'It is genuinely alight.', priority: 'high' })
-      .expect(201);
+    const created = await requester.agent.post('/api/tickets').send(TICKET_BODY).expect(201);
 
     const detail = await requester.agent.get(`/api/tickets/${created.body.id}`).expect(200);
 
@@ -69,20 +69,14 @@ describe('POST /api/tickets', () => {
   });
 
   describe('by actor', () => {
-    const body = {
-      title: 'Printer on fire',
-      description: 'It is genuinely alight.',
-      priority: 'medium',
-    };
-
     it('anonymous: 401', async () => {
-      await request(app.getHttpServer()).post('/api/tickets').send(body).expect(401);
+      await request(app.getHttpServer()).post('/api/tickets').send(TICKET_BODY).expect(401);
     });
 
-    it('a Requester: 201, owning the new Ticket', async () => {
+    it("a Requester: 201, recorded as the new Ticket's Requester", async () => {
       const requester = await createActor(app);
 
-      const response = await requester.agent.post('/api/tickets').send(body).expect(201);
+      const response = await requester.agent.post('/api/tickets').send(TICKET_BODY).expect(201);
 
       expect(response.body.creator).toEqual({
         id: requester.user.id,
@@ -90,10 +84,10 @@ describe('POST /api/tickets', () => {
       });
     });
 
-    it('Staff: 201, owning the new Ticket', async () => {
+    it("Staff: 201, recorded as the new Ticket's Requester", async () => {
       const staff = await createActor(app, 'STAFF');
 
-      const response = await staff.agent.post('/api/tickets').send(body).expect(201);
+      const response = await staff.agent.post('/api/tickets').send(TICKET_BODY).expect(201);
 
       expect(response.body.creator).toEqual({ id: staff.user.id, email: staff.user.email });
     });
@@ -101,22 +95,17 @@ describe('POST /api/tickets', () => {
 
   it('rejects a body the schema forbids with a field-prefixed 400', async () => {
     const requester = await createActor(app);
-    const valid = {
-      title: 'Printer on fire',
-      description: 'It is genuinely alight.',
-      priority: 'medium',
-    } as const;
 
     for (const [what, body, prefix] of [
-      ['a title over 120 characters', { ...valid, title: 'x'.repeat(121) }, 'title: '],
-      ['an empty title', { ...valid, title: '' }, 'title: '],
+      ['a title over 120 characters', { ...TICKET_BODY, title: 'x'.repeat(121) }, 'title: '],
+      ['an empty title', { ...TICKET_BODY, title: '' }, 'title: '],
       [
         'a description over 10,000 characters',
-        { ...valid, description: 'x'.repeat(10_001) },
+        { ...TICKET_BODY, description: 'x'.repeat(10_001) },
         'description: ',
       ],
-      ['an empty description', { ...valid, description: '' }, 'description: '],
-      ['an unknown Priority', { ...valid, priority: 'urgent' }, 'priority: '],
+      ['an empty description', { ...TICKET_BODY, description: '' }, 'description: '],
+      ['an unknown Priority', { ...TICKET_BODY, priority: 'urgent' }, 'priority: '],
     ] as const) {
       const response = await requester.agent.post('/api/tickets').send(body).expect(400);
 
@@ -130,21 +119,16 @@ describe('POST /api/tickets', () => {
 
   it('rejects a missing title and a missing description', async () => {
     const requester = await createActor(app);
-    const valid = {
-      title: 'Printer on fire',
-      description: 'It is genuinely alight.',
-      priority: 'medium',
-    } as const;
 
     const missingTitle = await requester.agent
       .post('/api/tickets')
-      .send({ description: valid.description, priority: valid.priority })
+      .send({ description: TICKET_BODY.description, priority: TICKET_BODY.priority })
       .expect(400);
     expect(missingTitle.body.message).toEqual([expect.stringMatching(/^title: /)]);
 
     const missingDescription = await requester.agent
       .post('/api/tickets')
-      .send({ title: valid.title, priority: valid.priority })
+      .send({ title: TICKET_BODY.title, priority: TICKET_BODY.priority })
       .expect(400);
     expect(missingDescription.body.message).toEqual([expect.stringMatching(/^description: /)]);
   });
@@ -153,12 +137,7 @@ describe('POST /api/tickets', () => {
     const requester = await createActor(app);
     const response = await requester.agent
       .post('/api/tickets')
-      .send({
-        title: 'Printer on fire',
-        description: 'It is genuinely alight.',
-        priority: 'medium',
-        status: 'closed',
-      })
+      .send({ ...TICKET_BODY, status: 'closed' })
       .expect(400);
 
     expect(response.body).toEqual({

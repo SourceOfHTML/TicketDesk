@@ -22,8 +22,6 @@ export function FormField({
   disabled = false,
   autoComplete,
 }: FormFieldProps) {
-  const errorsId = `${id}-errors`;
-
   return (
     <div>
       <label htmlFor={id}>{label}</label>
@@ -35,10 +33,9 @@ export function FormField({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         autoComplete={autoComplete}
-        aria-invalid={errors.length > 0 ? true : undefined}
-        aria-describedby={errors.length > 0 ? errorsId : undefined}
+        {...fieldAria(id, errors)}
       />
-      <FieldErrors id={errorsId} errors={errors} />
+      <FieldErrors id={id} errors={errors} />
     </div>
   );
 }
@@ -50,7 +47,6 @@ interface TextAreaFieldProps {
   onChange: (value: string) => void;
   errors?: string[];
   disabled?: boolean;
-  rows?: number;
 }
 
 export function TextAreaField({
@@ -60,10 +56,7 @@ export function TextAreaField({
   onChange,
   errors = [],
   disabled = false,
-  rows = 6,
 }: TextAreaFieldProps) {
-  const errorsId = `${id}-errors`;
-
   return (
     <div>
       <label htmlFor={id}>{label}</label>
@@ -71,13 +64,12 @@ export function TextAreaField({
         id={id}
         name={id}
         value={value}
-        rows={rows}
+        rows={6}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        aria-invalid={errors.length > 0 ? true : undefined}
-        aria-describedby={errors.length > 0 ? errorsId : undefined}
+        {...fieldAria(id, errors)}
       />
-      <FieldErrors id={errorsId} errors={errors} />
+      <FieldErrors id={id} errors={errors} />
     </div>
   );
 }
@@ -101,8 +93,6 @@ export function SelectField<T extends string>({
   errors = [],
   disabled = false,
 }: SelectFieldProps<T>) {
-  const errorsId = `${id}-errors`;
-
   return (
     <div>
       <label htmlFor={id}>{label}</label>
@@ -112,8 +102,7 @@ export function SelectField<T extends string>({
         value={value}
         onChange={(event) => onChange(event.target.value as T)}
         disabled={disabled}
-        aria-invalid={errors.length > 0 ? true : undefined}
-        aria-describedby={errors.length > 0 ? errorsId : undefined}
+        {...fieldAria(id, errors)}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -121,9 +110,17 @@ export function SelectField<T extends string>({
           </option>
         ))}
       </select>
-      <FieldErrors id={errorsId} errors={errors} />
+      <FieldErrors id={id} errors={errors} />
     </div>
   );
+}
+
+/** The aria contract every control shares: invalid state and its messages. */
+function fieldAria(
+  id: string,
+  errors: string[],
+): { 'aria-invalid'?: true; 'aria-describedby'?: string } {
+  return errors.length === 0 ? {} : { 'aria-invalid': true, 'aria-describedby': `${id}-errors` };
 }
 
 /** One field's messages, wired by the field's own `aria-describedby`. */
@@ -133,7 +130,7 @@ function FieldErrors({ id, errors }: { id: string; errors: string[] }) {
   }
 
   return (
-    <ul id={id}>
+    <ul id={`${id}-errors`}>
       {errors.map((message, index) => (
         <li key={`${id}-${index}`}>{message}</li>
       ))}

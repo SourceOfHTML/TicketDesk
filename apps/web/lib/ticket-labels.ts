@@ -16,8 +16,13 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 };
 
 /** A label record as the options of a `<select>` or a group of checkboxes. */
-export function optionsOf<T extends string>(
+function optionsOf<T extends string>(
   labels: Record<T, string>,
 ): Array<{ value: T; label: string }> {
   return (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
 }
+
+// Derived once, in declaration order, so the list's filters and the raise form
+// offer the same values under the same labels.
+export const STATUS_OPTIONS = optionsOf(STATUS_LABELS);
+export const PRIORITY_OPTIONS = optionsOf(PRIORITY_LABELS);

@@ -6,10 +6,12 @@ import { useEffect, useRef, useState } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
 import { sessionRequest } from '../../lib/api';
 import { normalizeError, type FormErrors } from '../../lib/form-errors';
-import { optionsOf, PRIORITY_LABELS, STATUS_LABELS } from '../../lib/ticket-labels';
-
-const STATUS_OPTIONS = optionsOf(STATUS_LABELS);
-const PRIORITY_OPTIONS = optionsOf(PRIORITY_LABELS);
+import {
+  PRIORITY_LABELS,
+  PRIORITY_OPTIONS,
+  STATUS_LABELS,
+  STATUS_OPTIONS,
+} from '../../lib/ticket-labels';
 
 /** The shared query's shape, with both filters always present. */
 type Filters = Required<TicketListQuery>;
