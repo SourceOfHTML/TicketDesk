@@ -54,6 +54,18 @@ export const ticketDetailSchema = ticketSchema.extend({
 });
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
 
+/**
+ * Raising a Ticket. Title and description are required and bounded; the
+ * Requester chooses the Priority, and everything else about the new Ticket is
+ * fixed by the act of raising it.
+ */
+export const createTicketSchema = z.strictObject({
+  title: z.string().min(1).max(120),
+  description: z.string().min(1).max(10_000),
+  priority: prioritySchema,
+});
+export type CreateTicketInput = z.infer<typeof createTicketSchema>;
+
 /** Any string is a well-formed id; an unknown one is a 404 from the service. */
 export const ticketParamsSchema = z.strictObject({
   id: z.string().min(1),

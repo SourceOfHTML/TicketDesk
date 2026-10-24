@@ -11,6 +11,7 @@ export {
 } from './schemas/auth';
 export {
   commentSchema,
+  createTicketSchema,
   prioritySchema,
   statusChangeSchema,
   statusSchema,
@@ -21,6 +22,7 @@ export {
   ticketSchema,
   userRefSchema,
   type Comment,
+  type CreateTicketInput,
   type Priority,
   type Status,
   type StatusChange,

@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import {
   ticketDetailSchema,
   ticketSchema,
+  type CreateTicketInput,
   type Ticket,
   type TicketDetail,
   type TicketListQuery,
@@ -16,6 +17,30 @@ const USER_REF = { id: true, email: true } as const;
 @Injectable()
 export class TicketsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Raising a Ticket never writes a Status Change: a new Ticket is `open` by
+   * definition, and `createdAt` already records when. The caller owns it,
+   * whether they are a Requester or Staff.
+   */
+  async create(user: UserSummary, input: CreateTicketInput): Promise<Ticket> {
+    const ticket = await this.prisma.ticket.create({
+      data: {
+        title: input.title,
+        description: input.description,
+        priority: input.priority,
+        status: 'open',
+        creatorId: user.id,
+      },
+      include: { creator: { select: USER_REF }, assignee: { select: USER_REF } },
+    });
+
+    return ticketSchema.parse({
+      ...ticket,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+    });
+  }
 
   /**
    * A Requester's view is their own Tickets; Staff reach every Ticket. The
