@@ -1,5 +1,6 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { userSummarySchema, type UserSummary } from '@ticketdesk/shared';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -49,16 +50,11 @@ class SmokeFailure extends Error {
 }
 
 interface HttpResponse {
+  label: string;
   status: number;
   setCookies: string[];
   body: string;
   raw: string;
-}
-
-interface UserSummary {
-  id: string;
-  email: string;
-  role: string;
 }
 
 /** Every raw response seen, so a failure can print the bytes it judged. */
@@ -95,59 +91,33 @@ async function main(): Promise<void> {
     };
     const body = JSON.stringify(credentials);
 
-    const signup = record(
+    const signup = request(
       'POST :3001/api/auth/signup (direct)',
-      curlLeg('the direct signup', [
-        '--request',
-        'POST',
-        '--header',
-        'content-type: application/json',
-        '--data-binary',
-        body,
-        `${API}/api/auth/signup`,
-      ]),
+      'SETUP',
+      postJson(`${API}/api/auth/signup`, body),
     );
-    expectStatus(signup, 201, 'PRECONDITION', 'the direct signup');
-    const caller = parseSummary(signup.body, 'PRECONDITION', 'the direct signup');
+    expectStatus(signup, 201, 'PRECONDITION');
+    const caller = parseSummary(signup, 'PRECONDITION');
 
-    const control = record(
+    const control = request(
       'POST :3001/api/auth/login (control, direct)',
-      curlLeg('the direct login', [
-        '--request',
-        'POST',
-        '--header',
-        'content-type: application/json',
-        '--data-binary',
-        body,
-        `${API}/api/auth/login`,
-      ]),
+      'SETUP',
+      postJson(`${API}/api/auth/login`, body),
     );
-    expectStatus(control, 200, 'PRECONDITION', 'the direct login');
-    const controlCookie = sessionCookieOf(control, 'PRECONDITION', 'the direct login');
-    const controlTail = attributesOf(controlCookie, 'PRECONDITION', 'the direct login');
+    expectStatus(control, 200, 'PRECONDITION');
+    const controlCookie = sessionCookieOf(control, 'PRECONDITION');
+    const controlTail = attributesOf(controlCookie, 'PRECONDITION', control.label);
 
+    ensureAlive(api, 'the API');
     ensureAlive(web, 'web');
-    const subject = record(
+    const subject = request(
       'POST :3000/api/auth/login (subject, through the rewrite)',
-      curlLeg(
-        'the proxied login',
-        [
-          '--cookie-jar',
-          jar,
-          '--request',
-          'POST',
-          '--header',
-          'content-type: application/json',
-          '--data-binary',
-          body,
-          `${WEB}/api/auth/login`,
-        ],
-        'SUBJECT',
-      ),
+      'SUBJECT',
+      postJson(`${WEB}/api/auth/login`, body, ['--cookie-jar', jar]),
     );
-    expectStatus(subject, 200, 'SUBJECT', 'the proxied login');
-    const subjectCookie = sessionCookieOf(subject, 'SUBJECT', 'the proxied login');
-    const subjectTail = attributesOf(subjectCookie, 'SUBJECT', 'the proxied login');
+    expectStatus(subject, 200, 'SUBJECT');
+    const subjectCookie = sessionCookieOf(subject, 'SUBJECT');
+    const subjectTail = attributesOf(subjectCookie, 'SUBJECT', subject.label);
 
     if (controlTail !== subjectTail) {
       throw new SmokeFailure(
@@ -156,17 +126,17 @@ async function main(): Promise<void> {
       );
     }
 
+    ensureAlive(api, 'the API');
     ensureAlive(web, 'web');
-    const replay = record(
-      'GET :3000/api/auth/me (replay, through the rewrite)',
-      curlLeg(
-        'the proxied replay',
-        ['--cookie', jar, '--cookie-jar', jar, `${WEB}/api/auth/me`],
-        'SUBJECT',
-      ),
-    );
-    expectStatus(replay, 200, 'SUBJECT', 'the proxied replay of /api/auth/me');
-    const replayed = parseSummary(replay.body, 'SUBJECT', 'the proxied replay of /api/auth/me');
+    const replay = request('GET :3000/api/auth/me (replay, through the rewrite)', 'SUBJECT', [
+      '--cookie',
+      jar,
+      '--cookie-jar',
+      jar,
+      `${WEB}/api/auth/me`,
+    ]);
+    expectStatus(replay, 200, 'SUBJECT');
+    const replayed = parseSummary(replay, 'SUBJECT');
 
     if (
       replayed.id !== caller.id ||
@@ -179,7 +149,7 @@ async function main(): Promise<void> {
       );
     }
 
-    const refreshed = sessionCookieOf(replay, 'SUBJECT', 'the proxied replay');
+    const refreshed = sessionCookieOf(replay, 'SUBJECT');
     if (tokenOf(refreshed) !== tokenOf(subjectCookie)) {
       throw new SmokeFailure(
         'SUBJECT',
@@ -187,7 +157,7 @@ async function main(): Promise<void> {
       );
     }
 
-    const refreshedTail = attributesOf(refreshed, 'SUBJECT', 'the proxied replay');
+    const refreshedTail = attributesOf(refreshed, 'SUBJECT', replay.label);
     if (refreshedTail !== controlTail) {
       throw new SmokeFailure(
         'SUBJECT',
@@ -209,7 +179,7 @@ function prepare(env: NodeJS.ProcessEnv): void {
   console.log('smoke:cookie: preparing and seeding the database (pnpm bootstrap)');
   run('pnpm bootstrap', 'pnpm', ['run', 'bootstrap'], env, ROOT);
 
-  console.log(`smoke:cookie: building the web app`);
+  console.log('smoke:cookie: building the web app');
   run('the web build', process.execPath, [NEXT_BIN, 'build'], env, WEB_DIR);
 }
 
@@ -355,7 +325,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 /** `--dump-header -` is the exact wire view the research measured. */
-function curl(args: string[]): HttpResponse {
+function curl(label: string, args: string[]): HttpResponse {
   const raw = execFileSync(
     'curl',
     [
@@ -370,18 +340,37 @@ function curl(args: string[]): HttpResponse {
     { encoding: 'utf8' },
   );
 
-  return parseResponse(raw);
+  return parseResponse(label, raw);
 }
 
-function curlLeg(what: string, args: string[], verdict: Verdict = 'SETUP'): HttpResponse {
+/** One request, recorded verbatim so a failure can print the bytes it judged. */
+function request(label: string, verdict: Verdict, args: string[]): HttpResponse {
+  let response: HttpResponse;
+
   try {
-    return curl(args);
+    response = curl(label, args);
   } catch (error) {
-    throw new SmokeFailure(verdict, `${what} did not complete: ${describe(error)}`);
+    throw new SmokeFailure(verdict, `${label} did not complete: ${describe(error)}`);
   }
+
+  transcripts.push({ label, raw: response.raw });
+  return response;
 }
 
-function parseResponse(raw: string): HttpResponse {
+function postJson(url: string, body: string, extra: string[] = []): string[] {
+  return [
+    '--request',
+    'POST',
+    '--header',
+    'content-type: application/json',
+    '--data-binary',
+    body,
+    ...extra,
+    url,
+  ];
+}
+
+function parseResponse(label: string, raw: string): HttpResponse {
   const headerEnd = raw.indexOf('\r\n\r\n');
   const head = headerEnd === -1 ? raw : raw.slice(0, headerEnd);
   const body = headerEnd === -1 ? '' : raw.slice(headerEnd + 4);
@@ -404,37 +393,27 @@ function parseResponse(raw: string): HttpResponse {
     }
   }
 
-  return { status, setCookies, body, raw };
+  return { label, status, setCookies, body, raw };
 }
 
-function record(label: string, response: HttpResponse): HttpResponse {
-  transcripts.push({ label, raw: response.raw });
-  return response;
-}
-
-function expectStatus(
-  response: HttpResponse,
-  expected: number,
-  verdict: Verdict,
-  what: string,
-): void {
+function expectStatus(response: HttpResponse, expected: number, verdict: Verdict): void {
   if (response.status !== expected) {
     throw new SmokeFailure(
       verdict,
-      `${what} answered ${response.status}, expected ${expected}: ${response.body.trim()}`,
+      `${response.label} answered ${response.status}, expected ${expected}: ${response.body.trim()}`,
     );
   }
 }
 
-function sessionCookieOf(response: HttpResponse, verdict: Verdict, what: string): string {
-  const cookies = response.setCookies.filter((cookie) =>
-    cookie.toLowerCase().startsWith('session='),
-  );
+function sessionCookieOf(response: HttpResponse, verdict: Verdict): string {
+  // The literal `session` name is the browser's contract here, so it is stated
+  // rather than imported from the API's constant.
+  const cookies = response.setCookies.filter((cookie) => cookie.startsWith('session='));
 
   if (cookies.length !== 1) {
     throw new SmokeFailure(
       verdict,
-      `${what} carried ${cookies.length} session Set-Cookie headers, expected exactly one`,
+      `${response.label} carried ${cookies.length} session Set-Cookie headers, expected exactly one`,
     );
   }
 
@@ -456,23 +435,14 @@ function tokenOf(cookie: string): string {
   return /^session=([^;]*)/.exec(cookie)?.[1] ?? '';
 }
 
-function parseSummary(body: string, verdict: Verdict, what: string): UserSummary {
+function parseSummary(response: HttpResponse, verdict: Verdict): UserSummary {
   try {
-    const parsed: unknown = JSON.parse(body);
-
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      typeof (parsed as UserSummary).id !== 'string' ||
-      typeof (parsed as UserSummary).email !== 'string' ||
-      typeof (parsed as UserSummary).role !== 'string'
-    ) {
-      throw new Error(`not a user summary: ${body.trim()}`);
-    }
-
-    return parsed as UserSummary;
+    return userSummarySchema.parse(JSON.parse(response.body));
   } catch (error) {
-    throw new SmokeFailure(verdict, `${what} returned an unreadable body: ${describe(error)}`);
+    throw new SmokeFailure(
+      verdict,
+      `${response.label} returned an unreadable user summary: ${describe(error)}`,
+    );
   }
 }
 
