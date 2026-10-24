@@ -327,9 +327,9 @@ function StaffControl({
   onSaved,
 }: StaffControlProps) {
   const [errors, setErrors] = useState<FormErrors | null>(null);
-  const chosen = useRef(value);
+  const pendingValue = useRef(value);
 
-  const mutation = useMutation(() => save(chosen.current), {
+  const mutation = useMutation(() => save(pendingValue.current), {
     onSuccess: () => {
       setErrors(null);
       onSaved();
@@ -341,7 +341,7 @@ function StaffControl({
       return;
     }
 
-    chosen.current = next;
+    pendingValue.current = next;
     setErrors(null);
     const result = await mutation.run();
 
