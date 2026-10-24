@@ -106,6 +106,9 @@ describe('POST /api/tickets', () => {
       ],
       ['an empty description', { ...TICKET_BODY, description: '' }, 'description: '],
       ['an unknown Priority', { ...TICKET_BODY, priority: 'urgent' }, 'priority: '],
+      // What the raise form sends when no radio has been chosen: the form must
+      // not invent a Priority, and the API is what refuses the blank.
+      ['an empty Priority', { ...TICKET_BODY, priority: '' }, 'priority: '],
     ] as const) {
       const response = await requester.agent.post('/api/tickets').send(body).expect(400);
 
