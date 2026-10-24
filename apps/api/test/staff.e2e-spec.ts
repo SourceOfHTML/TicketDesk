@@ -88,9 +88,45 @@ describe("the Staff queue's routes, by actor", () => {
 
     await request(app.getHttpServer()).get(path).expect(401);
     await requester.agent.get(path).expect(403);
+    // The special value is Staff-only too: the parameter is refused before
+    // any value of it is read.
+    await requester.agent.get('/api/tickets?assigneeId=unassigned').expect(403);
 
     const asStaff = await staff.agent.get(path).expect(200);
     expect(asStaff.body.map((ticket: { id: string }) => ticket.id)).toEqual([assigned.id]);
+  });
+
+  it('GET /api/tickets?assigneeId=unassigned: only the Tickets nobody owns', async () => {
+    const requester = await createActor(app);
+    const staff = await createActor(app, 'STAFF');
+
+    const unowned = await createTicket(app, { creatorId: requester.user.id });
+    await createTicket(app, { creatorId: requester.user.id, assigneeId: staff.user.id });
+
+    const response = await staff.agent.get('/api/tickets?assigneeId=unassigned').expect(200);
+
+    expect(response.body.map((ticket: { id: string }) => ticket.id)).toEqual([unowned.id]);
+  });
+
+  it('combines chosen Staff and unassigned in one Assignee filter', async () => {
+    const requester = await createActor(app);
+    const staff = await createActor(app, 'STAFF');
+    const colleague = await createActor(app, 'STAFF');
+
+    const mine = await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: staff.user.id,
+    });
+    await createTicket(app, { creatorId: requester.user.id, assigneeId: colleague.user.id });
+    const unowned = await createTicket(app, { creatorId: requester.user.id });
+
+    const response = await staff.agent
+      .get(`/api/tickets?assigneeId=${staff.user.id},unassigned`)
+      .expect(200);
+
+    expect((response.body as Array<{ id: string }>).map((ticket) => ticket.id).sort()).toEqual(
+      [mine.id, unowned.id].sort(),
+    );
   });
 
   it('GET /api/staff: anonymous 401, a Requester 403, Staff 200', async () => {

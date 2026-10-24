@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  UNASSIGNED_ASSIGNEE,
   commentSchema,
   ticketDetailSchema,
   ticketSchema,
@@ -74,11 +75,24 @@ export class TicketsService {
       throw new ForbiddenException('Staff only');
     }
 
+    // The Assignee filter is an "any of these" over Staff, with `unassigned`
+    // asking for the Tickets nobody owns. Choosing several keeps that OR, so a
+    // combination is never read as "assigned to X and unowned at once".
+    const assigneeIds = assigneeId?.filter((value) => value !== UNASSIGNED_ASSIGNEE);
+    const assigneeFilters: Prisma.TicketWhereInput[] = [];
+
+    if (assigneeIds !== undefined && assigneeIds.length > 0) {
+      assigneeFilters.push({ assigneeId: { in: assigneeIds } });
+    }
+    if (assigneeId?.includes(UNASSIGNED_ASSIGNEE) === true) {
+      assigneeFilters.push({ assigneeId: null });
+    }
+
     const where: Prisma.TicketWhereInput = {
       ...(isStaff ? {} : { creatorId: user.id }),
       ...(status === undefined ? {} : { status: { in: status } }),
       ...(priority === undefined ? {} : { priority: { in: priority } }),
-      ...(assigneeId === undefined ? {} : { assigneeId: { in: assigneeId } }),
+      ...(assigneeFilters.length === 0 ? {} : { OR: assigneeFilters }),
     };
 
     const tickets = await this.prisma.ticket.findMany({

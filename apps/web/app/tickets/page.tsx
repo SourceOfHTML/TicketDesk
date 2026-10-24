@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  UNASSIGNED_ASSIGNEE,
   ticketListQueryString,
   type Ticket,
   type TicketListQuery,
@@ -173,8 +174,19 @@ export default function TicketsPage() {
     loadedFilters.status.length > 0 ||
     loadedFilters.priority.length > 0 ||
     loadedFilters.assigneeId.length > 0;
-  const staffOptions =
-    staff === null ? null : staff.map((member) => ({ value: member.id, label: member.email }));
+  // The signed-in Staff member gets the shortcut rather than their own email;
+  // the rest of the directory follows. Both special choices ride in the same
+  // multi-select, so any combination is legal.
+  const assigneeOptions =
+    user === null || user.role !== 'STAFF'
+      ? []
+      : [
+          { value: user.id, label: 'Assigned to me' },
+          { value: UNASSIGNED_ASSIGNEE, label: 'Unassigned' },
+          ...(staff ?? [])
+            .filter((member) => member.id !== user.id)
+            .map((member) => ({ value: member.id, label: member.email })),
+        ];
 
   return (
     <section aria-labelledby="tickets-heading">
@@ -203,16 +215,17 @@ export default function TicketsPage() {
           onToggle={(priority) => toggleFilter('priority', priority)}
         />
 
-        {/* No options yet means no filter: an empty fieldset would only mislead. */}
-        {staffOptions === null ? null : (
+        {/* Staff only, and only once the role is known. The two special choices
+            need no directory, so the filter works while Staff load. */}
+        {isStaff ? (
           <FilterFieldset
             name="assigneeId"
             legend="Assignee"
-            options={staffOptions}
+            options={assigneeOptions}
             selected={filters.assigneeId}
             onToggle={(assigneeId) => toggleFilter('assigneeId', assigneeId)}
           />
-        )}
+        ) : null}
       </div>
 
       <LoadFailure errors={failure} />

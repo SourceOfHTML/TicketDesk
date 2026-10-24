@@ -128,6 +128,13 @@ function commaSeparated<T extends z.ZodType>(item: T) {
   });
 }
 
+/**
+ * The one `assigneeId` value that is not a User id: the Tickets no Staff member
+ * owns. It rides in the same comma-separated list, so one multi-select can ask
+ * for some Staff and the unowned Tickets together.
+ */
+export const UNASSIGNED_ASSIGNEE = 'unassigned';
+
 export const ticketListQuerySchema = z.strictObject({
   status: commaSeparated(statusSchema).optional(),
   priority: commaSeparated(prioritySchema).optional(),

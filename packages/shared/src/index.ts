@@ -10,6 +10,7 @@ export {
   type UserSummary,
 } from './schemas/auth';
 export {
+  UNASSIGNED_ASSIGNEE,
   commentSchema,
   createCommentSchema,
   createTicketSchema,
