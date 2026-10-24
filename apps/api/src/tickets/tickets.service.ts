@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   commentSchema,
   ticketDetailSchema,
@@ -9,6 +14,8 @@ import {
   type Ticket,
   type TicketDetail,
   type TicketListQuery,
+  type UpdateAssigneeInput,
+  type UpdatePriorityInput,
   type UserSummary,
 } from '@ticketdesk/shared';
 import { Prisma } from '../generated/prisma/client';
@@ -152,6 +159,55 @@ export class TicketsService {
     });
 
     return commentSchema.parse({ ...comment, createdAt: comment.createdAt.toISOString() });
+  }
+
+  /** Staff correct the Requester's assessment; nothing else about the Ticket moves. */
+  async updatePriority(id: string, input: UpdatePriorityInput): Promise<Ticket> {
+    await this.assertExists(id);
+
+    const ticket = await this.prisma.ticket.update({
+      where: { id },
+      data: { priority: input.priority },
+      include: TICKET_INCLUDE,
+    });
+
+    return toTicket(ticket);
+  }
+
+  /**
+   * Only Staff own work: an Assignee that names a USER, or no User at all, is
+   * a bad request. Unassigning is a legitimate state, hence `null`.
+   */
+  async updateAssignee(id: string, input: UpdateAssigneeInput): Promise<Ticket> {
+    await this.assertExists(id);
+
+    if (input.assigneeId !== null) {
+      const assignee = await this.prisma.user.findUnique({
+        where: { id: input.assigneeId },
+        select: { role: true },
+      });
+
+      if (assignee === null || assignee.role !== 'STAFF') {
+        throw new BadRequestException('Assignee must be Staff');
+      }
+    }
+
+    const ticket = await this.prisma.ticket.update({
+      where: { id },
+      data: { assigneeId: input.assigneeId },
+      include: TICKET_INCLUDE,
+    });
+
+    return toTicket(ticket);
+  }
+
+  /** An absent Ticket is a 404 on every route that names one. */
+  private async assertExists(id: string): Promise<void> {
+    const ticket = await this.prisma.ticket.findUnique({ where: { id }, select: { id: true } });
+
+    if (ticket === null) {
+      throw new NotFoundException('Ticket not found');
+    }
   }
 
   /** The one visibility rule: a Ticket's Requester or any Staff member. */

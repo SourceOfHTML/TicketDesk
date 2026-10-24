@@ -37,7 +37,8 @@ fieldset label {
 
 /* Inherited, or the fields fall back to the browser's own fonts. */
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -171,6 +172,37 @@ td {
 
 .ticket-meta dd {
   margin: 0;
+}
+
+/* Staff controls sit between the Ticket and its threads: they change the
+   Ticket, so they live beside it rather than inside its read-only frame. */
+.staff-panel {
+  margin-top: 1.5rem;
+  border: 1px solid #a16207;
+  padding: 1rem 1.25rem;
+}
+
+.staff-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1em;
+}
+
+.staff-control {
+  margin-bottom: 1rem;
+}
+
+.staff-control:last-child {
+  margin-bottom: 0;
+}
+
+.staff-control label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.staff-control select {
+  min-width: 14rem;
+  padding: 0.35rem 0.5rem;
 }
 
 /* The thread is its own block, outside the Ticket's frame. */
