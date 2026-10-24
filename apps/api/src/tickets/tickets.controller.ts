@@ -25,10 +25,10 @@ export class TicketsController {
   }
 
   @Get(':id')
-  get(
+  detail(
     @Req() request: AuthenticatedRequest,
     @ZodParam(ticketParamsSchema) params: TicketParams,
   ): Promise<TicketDetail> {
-    return this.ticketsService.get(request.user, params.id);
+    return this.ticketsService.detail(request.user, params.id);
   }
 }
