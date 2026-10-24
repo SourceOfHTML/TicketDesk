@@ -384,9 +384,10 @@ interface StatusFormProps {
 
 /**
  * Staff-only: one form for the whole move. The select offers all four Statuses
- * from a placeholder and knows no transition table — an illegal target is the
- * API's 400 in the banner, not a hidden option here. The whole form freezes
- * while writing, so one submission can never record two transitions.
+ * from a placeholder and knows no rule about which moves are legal — an illegal
+ * target is the API's 400 in the banner, not a hidden option here. The whole
+ * form freezes while writing, so one submission can never record two Status
+ * Changes.
  */
 function StatusForm({ ticket, onChanged }: StatusFormProps) {
   const [status, setStatus] = useState('');
@@ -427,6 +428,9 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
 
     if (result !== undefined && !result.ok) {
       setErrors(normalizeError(result.error, STATUS_FORM_FIELDS));
+      // The read rule applies to a failure too: the Ticket may have been moved
+      // or deleted under us. The chosen Status and typed reason survive.
+      onChanged();
     }
   }
 
@@ -459,6 +463,9 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
           onChange={setReason}
           errors={errors.fields.reason}
           disabled={mutation.pending}
+          // Rendered only when the rule requires it; the label alone would not
+          // tell a screen reader so.
+          ariaRequired
         />
       ) : null}
       <button type="submit" disabled={mutation.pending || status === ''}>
