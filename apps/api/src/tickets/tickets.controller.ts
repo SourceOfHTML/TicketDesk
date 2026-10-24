@@ -6,6 +6,7 @@ import {
   ticketParamsSchema,
   updateAssigneeSchema,
   updatePrioritySchema,
+  updateStatusSchema,
   type Comment,
   type CreateCommentInput,
   type CreateTicketInput,
@@ -15,6 +16,7 @@ import {
   type TicketParams,
   type UpdateAssigneeInput,
   type UpdatePriorityInput,
+  type UpdateStatusInput,
 } from '@ticketdesk/shared';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 import { SessionGuard, type AuthenticatedRequest } from '../auth/session.guard';
@@ -70,6 +72,18 @@ export class TicketsController {
     @ZodBody(updateAssigneeSchema) input: UpdateAssigneeInput,
   ): Promise<Ticket> {
     return this.ticketsService.updateAssignee(params.id, input);
+  }
+
+  /** Staff only: moving the Ticket along its six legal transitions. */
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('STAFF')
+  updateStatus(
+    @Req() request: AuthenticatedRequest,
+    @ZodParam(ticketParamsSchema) params: TicketParams,
+    @ZodBody(updateStatusSchema) input: UpdateStatusInput,
+  ): Promise<Ticket> {
+    return this.ticketsService.updateStatus(request.user, params.id, input);
   }
 
   @Post(':id/comments')

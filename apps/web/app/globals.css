@@ -68,7 +68,8 @@ textarea {
 
 /* An invalid control says so before the reader reaches its message. */
 input[aria-invalid='true'],
-textarea[aria-invalid='true'] {
+textarea[aria-invalid='true'],
+select[aria-invalid='true'] {
   border: 1px solid #b91c1c;
 }
 
