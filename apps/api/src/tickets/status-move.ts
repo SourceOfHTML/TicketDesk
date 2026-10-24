@@ -15,7 +15,7 @@ const LEGAL_MOVES: ReadonlyArray<readonly [Status, Status]> = [
 ];
 
 /** Why a move was refused. The service turns each into its own HTTP answer. */
-export type StatusMoveRefusal = 'not-staff' | 'illegal' | 'reason-required';
+export type StatusMoveRefusal = 'not-staff' | 'illegal' | 'assignee-required' | 'reason-required';
 
 /**
  * A legal move carries the reason the Status Change records, already trimmed; a
@@ -29,14 +29,16 @@ export type StatusMoveVerdict =
  * no HTTP — so all 16 pairs can be checked without anything else in the way.
  *
  * The Role is asked first: a Requester may make no move at all, legal or not.
+ * `open → in-progress` needs an Assignee — work nobody owns cannot start — and
  * `closed → open` needs a reason that survives trimming; every other move may
- * carry one, and an empty one is recorded as none.
+ * carry a reason, and an empty one is recorded as none.
  */
 export function checkStatusMove(
   from: Status,
   to: Status,
   actorRole: Role,
   reason: string | null | undefined,
+  hasAssignee: boolean,
 ): StatusMoveVerdict {
   if (actorRole !== 'STAFF') {
     return { ok: false, refusal: 'not-staff', message: 'Staff only' };
@@ -52,6 +54,14 @@ export function checkStatusMove(
       ok: false,
       refusal: 'illegal',
       message: `Cannot move a ticket from ${from} to ${to}.`,
+    };
+  }
+
+  if (from === 'open' && to === 'in-progress' && !hasAssignee) {
+    return {
+      ok: false,
+      refusal: 'assignee-required',
+      message: 'A ticket needs an Assignee before it can move to in-progress.',
     };
   }
 
