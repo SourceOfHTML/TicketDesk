@@ -13,9 +13,7 @@ import {
 } from '@ticketdesk/shared';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-
-/** User summaries carry these fields and no others — never a password hash. */
-const USER_REF = { id: true, email: true } as const;
+import { USER_REF } from '../users/user-ref';
 
 /** Every Ticket response embeds its Requester and Assignee, never whole Users. */
 const TICKET_INCLUDE = { creator: { select: USER_REF }, assignee: { select: USER_REF } } as const;
@@ -57,11 +55,23 @@ export class TicketsService {
    * A Requester's view is their own Tickets; Staff reach every Ticket. The
    * filter is applied in the query, never after it (spec: visibility).
    */
-  async list(user: UserSummary, { status, priority }: TicketListQuery): Promise<Ticket[]> {
+  async list(
+    user: UserSummary,
+    { status, priority, assigneeId }: TicketListQuery,
+  ): Promise<Ticket[]> {
+    const isStaff = user.role === 'STAFF';
+
+    // `assigneeId` is Staff-only. Refused, not ignored: a Requester who asks to
+    // filter by Assignee is told so rather than handed an unfiltered list.
+    if (assigneeId !== undefined && !isStaff) {
+      throw new ForbiddenException('Staff only');
+    }
+
     const where: Prisma.TicketWhereInput = {
-      ...(user.role === 'STAFF' ? {} : { creatorId: user.id }),
+      ...(isStaff ? {} : { creatorId: user.id }),
       ...(status === undefined ? {} : { status: { in: status } }),
       ...(priority === undefined ? {} : { priority: { in: priority } }),
+      ...(assigneeId === undefined ? {} : { assigneeId: { in: assigneeId } }),
     };
 
     const tickets = await this.prisma.ticket.findMany({

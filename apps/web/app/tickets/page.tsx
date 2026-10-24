@@ -1,21 +1,32 @@
 'use client';
 
-import { ticketListQueryString, type Ticket, type TicketListQuery } from '@ticketdesk/shared';
+import {
+  ticketListQueryString,
+  type Ticket,
+  type TicketListQuery,
+  type UserRef,
+} from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
+import { useSession } from '../../components/session-provider';
 import { PriorityBadge, StatusBadge } from '../../components/ticket-badges';
 import { sessionRequest } from '../../lib/api';
 import { normalizeError, type FormErrors } from '../../lib/form-errors';
 import { PRIORITY_OPTIONS, STATUS_OPTIONS } from '../../lib/ticket-labels';
 
-/** The shared query's shape, with both filters always present. */
+/** The shared query's shape, with every filter always present. */
 type Filters = Required<TicketListQuery>;
 
 function toggle<T>(values: T[], value: T): T[] {
   return values.includes(value)
     ? values.filter((existing) => existing !== value)
     : [...values, value];
+}
+
+/** Nothing selected, every filter present. */
+function emptyFilters(): Filters {
+  return { status: [], priority: [], assigneeId: [] };
 }
 
 function listPath(filters: Filters): string {
@@ -57,16 +68,42 @@ function FilterFieldset<T extends string>({
   );
 }
 
+/** A failed read: the banner, with details only for a 5xx. */
+function LoadFailure({ errors }: { errors: FormErrors | null }) {
+  if (errors === null) {
+    return null;
+  }
+
+  return (
+    <ErrorBanner
+      messages={errors.banner}
+      details={errors.statusCode >= 500 ? errors.details : undefined}
+    />
+  );
+}
+
 export default function TicketsPage() {
+  const { user } = useSession();
+  // The role is unknown until `/me` answers — and it is null then — so no
+  // Staff control renders before it arrives.
+  const isStaff = user?.role === 'STAFF';
+
   // Null until a first load has answered. That is the only loading state:
   // static chrome is always on screen, and nothing pretends to be content.
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [failure, setFailure] = useState<FormErrors | null>(null);
-  const [filters, setFilters] = useState<Filters>({ status: [], priority: [] });
+  // The Assignee picker's options, fetched only for Staff.
+  const [staff, setStaff] = useState<UserRef[] | null>(null);
+  const [staffFailure, setStaffFailure] = useState<FormErrors | null>(null);
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
   // Which filters produced the rows on screen, so the empty message describes
   // the response rather than a selection still in flight.
-  const [loadedFilters, setLoadedFilters] = useState<Filters>({ status: [], priority: [] });
+  const [loadedFilters, setLoadedFilters] = useState<Filters>(emptyFilters);
   const [requestInFlight, setRequestInFlight] = useState(true);
+
+  function toggleFilter<K extends keyof Filters>(key: K, value: Filters[K][number]): void {
+    setFilters((current) => ({ ...current, [key]: toggle(current[key], value) }));
+  }
 
   // A filter change starts a new fetch while an older one may still be in
   // flight; only the newest response may touch the table.
@@ -103,10 +140,41 @@ export default function TicketsPage() {
     };
   }, [filters]);
 
+  // The directory is Staff-only, so a Requester's page never asks for it.
+  useEffect(() => {
+    if (!isStaff) {
+      return;
+    }
+
+    let active = true;
+
+    void sessionRequest<UserRef[]>('/api/staff').then((result) => {
+      if (!active) {
+        return;
+      }
+
+      if (result.ok) {
+        setStaff(result.data);
+        setStaffFailure(null);
+      } else {
+        setStaffFailure(normalizeError(result.error, []));
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isStaff]);
+
   // Unknown data waits, and only a list with no rows is unknown: a refetch
   // keeps the current rows visible and unmarked.
   const firstLoadInFlight = tickets === null && requestInFlight;
-  const hasFilters = loadedFilters.status.length > 0 || loadedFilters.priority.length > 0;
+  const hasFilters =
+    loadedFilters.status.length > 0 ||
+    loadedFilters.priority.length > 0 ||
+    loadedFilters.assigneeId.length > 0;
+  const staffOptions =
+    staff === null ? null : staff.map((member) => ({ value: member.id, label: member.email }));
 
   return (
     <section aria-labelledby="tickets-heading">
@@ -116,15 +184,15 @@ export default function TicketsPage() {
         <Link href="/tickets/new">Raise a ticket</Link>
       </p>
 
+      <LoadFailure errors={staffFailure} />
+
       <div role="group" aria-label="Filters">
         <FilterFieldset
           name="status"
           legend="Status"
           options={STATUS_OPTIONS}
           selected={filters.status}
-          onToggle={(status) =>
-            setFilters((current) => ({ ...current, status: toggle(current.status, status) }))
-          }
+          onToggle={(status) => toggleFilter('status', status)}
         />
 
         <FilterFieldset
@@ -132,21 +200,22 @@ export default function TicketsPage() {
           legend="Priority"
           options={PRIORITY_OPTIONS}
           selected={filters.priority}
-          onToggle={(priority) =>
-            setFilters((current) => ({
-              ...current,
-              priority: toggle(current.priority, priority),
-            }))
-          }
+          onToggle={(priority) => toggleFilter('priority', priority)}
         />
+
+        {/* No options yet means no filter: an empty fieldset would only mislead. */}
+        {staffOptions === null ? null : (
+          <FilterFieldset
+            name="assigneeId"
+            legend="Assignee"
+            options={staffOptions}
+            selected={filters.assigneeId}
+            onToggle={(assigneeId) => toggleFilter('assigneeId', assigneeId)}
+          />
+        )}
       </div>
 
-      {failure === null ? null : (
-        <ErrorBanner
-          messages={failure.banner}
-          details={failure.statusCode >= 500 ? failure.details : undefined}
-        />
-      )}
+      <LoadFailure errors={failure} />
 
       <div aria-busy={firstLoadInFlight ? true : undefined}>
         <table>
@@ -155,12 +224,15 @@ export default function TicketsPage() {
               <th scope="col">Title</th>
               <th scope="col">Status</th>
               <th scope="col">Priority</th>
+              {isStaff ? <th scope="col">Assignee</th> : null}
             </tr>
           </thead>
           <tbody>
             {tickets === null ? null : tickets.length === 0 ? (
               <tr>
-                <td colSpan={3}>{hasFilters ? 'No tickets match.' : 'No tickets yet.'}</td>
+                <td colSpan={isStaff ? 4 : 3}>
+                  {hasFilters ? 'No tickets match.' : 'No tickets yet.'}
+                </td>
               </tr>
             ) : (
               tickets.map((ticket) => (
@@ -174,6 +246,9 @@ export default function TicketsPage() {
                   <td>
                     <PriorityBadge priority={ticket.priority} />
                   </td>
+                  {isStaff ? (
+                    <td>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</td>
+                  ) : null}
                 </tr>
               ))
             )}

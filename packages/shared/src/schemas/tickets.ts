@@ -112,6 +112,8 @@ function commaSeparated<T extends z.ZodType>(item: T) {
 export const ticketListQuerySchema = z.strictObject({
   status: commaSeparated(statusSchema).optional(),
   priority: commaSeparated(prioritySchema).optional(),
+  /** Staff only: a Requester who supplies it is refused by the API, not ignored. */
+  assigneeId: commaSeparated(z.string().min(1)).optional(),
 });
 export type TicketListQuery = z.infer<typeof ticketListQuerySchema>;
 
@@ -128,6 +130,9 @@ export function ticketListQueryString(query: TicketListQuery): string {
   }
   if (query.priority !== undefined && query.priority.length > 0) {
     params.set('priority', query.priority.join(','));
+  }
+  if (query.assigneeId !== undefined && query.assigneeId.length > 0) {
+    params.set('assigneeId', query.assigneeId.join(','));
   }
 
   return params.toString();
