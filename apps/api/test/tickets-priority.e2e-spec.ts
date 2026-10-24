@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createActor, type Actor } from './actors';
 import { createTestApp, resetDb } from './app';
+import { sessionTokenOf, setCookies } from './cookies';
 import { createTicket } from './tickets';
 
 describe('PATCH /api/tickets/:id/priority', () => {
@@ -152,6 +153,25 @@ describe('PATCH /api/tickets/:id/priority', () => {
       const response = await staff.agent.patch(path).send({ priority: 'high' }).expect(200);
 
       expect(response.body.priority).toBe('high');
+    });
+
+    it('refreshes the session cookie, same token, on a 403 and a 200', async () => {
+      const requesterToken = sessionTokenOf(setCookies(requester.loginResponse)[0] ?? '');
+      const staffToken = sessionTokenOf(setCookies(staff.loginResponse)[0] ?? '');
+
+      const forbidden = await requester.agent.patch(path).send({ priority: 'high' }).expect(403);
+      const forbiddenCookies = setCookies(forbidden);
+
+      expect(forbiddenCookies).toHaveLength(1);
+      expect(sessionTokenOf(forbiddenCookies[0] ?? '')).toBe(requesterToken);
+      expect(forbiddenCookies[0]).toMatch(/Max-Age=604800/);
+
+      const allowed = await staff.agent.patch(path).send({ priority: 'high' }).expect(200);
+      const allowedCookies = setCookies(allowed);
+
+      expect(allowedCookies).toHaveLength(1);
+      expect(sessionTokenOf(allowedCookies[0] ?? '')).toBe(staffToken);
+      expect(allowedCookies[0]).toMatch(/Max-Age=604800/);
     });
   });
 });
