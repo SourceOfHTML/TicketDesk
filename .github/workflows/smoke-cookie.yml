@@ -1,0 +1,32 @@
+name: Smoke cookie
+
+# Deliberately outside the aggregate gates and deliberately not a required
+# status check: this job exists to notice an undocumented Next.js change, which
+# is a finding to read rather than a gate a merge should trip on.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-cookie:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The script owns its whole setup: throwaway database, build, both servers.
+      - run: pnpm smoke:cookie

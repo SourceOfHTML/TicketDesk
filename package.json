@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "prisma generate && pnpm -r --no-bail run test",
+    "smoke:cookie": "tsx scripts/smoke-cookie.ts",
     "gates": "tsx scripts/gates.ts"
   },
   "devDependencies": {
