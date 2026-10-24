@@ -27,7 +27,9 @@ describe('checkStatusMove', () => {
   for (const from of STATUSES) {
     for (const to of STATUSES) {
       it(`Staff: ${from} → ${to}`, () => {
-        const verdict = checkStatusMove(from, to, 'STAFF', undefined);
+        // Every Ticket here has an Assignee, so this loop is about the moves
+        // alone; the Assignee requirement has its own block below.
+        const verdict = checkStatusMove(from, to, 'STAFF', undefined, true);
 
         if (isLegal(from, to) && !(from === 'closed' && to === 'open')) {
           expect(verdict).toEqual({ ok: true, reason: null });
@@ -48,7 +50,7 @@ describe('checkStatusMove', () => {
       });
 
       it(`Requester: ${from} → ${to}`, () => {
-        expect(checkStatusMove(from, to, 'USER', 'Plausible reason')).toEqual({
+        expect(checkStatusMove(from, to, 'USER', 'Plausible reason', true)).toEqual({
           ok: false,
           refusal: 'not-staff',
           message: 'Staff only',
@@ -57,9 +59,40 @@ describe('checkStatusMove', () => {
     }
   }
 
+  describe('the Assignee requirement', () => {
+    it('refuses open → in-progress without an Assignee', () => {
+      expect(checkStatusMove('open', 'in-progress', 'STAFF', undefined, false)).toEqual({
+        ok: false,
+        refusal: 'assignee-required',
+        message: 'A ticket needs an Assignee before it can move to in-progress.',
+      });
+    });
+
+    it('allows open → in-progress once an Assignee is named', () => {
+      expect(checkStatusMove('open', 'in-progress', 'STAFF', undefined, true)).toEqual({
+        ok: true,
+        reason: null,
+      });
+    });
+
+    it('asks for no Assignee on any other legal move', () => {
+      for (const [from, to] of LEGAL_MOVES) {
+        if (from === 'open' && to === 'in-progress') {
+          continue;
+        }
+
+        const reason = from === 'closed' && to === 'open' ? 'Back again.' : undefined;
+
+        expect(checkStatusMove(from, to, 'STAFF', reason, false), `${from} → ${to}`).toMatchObject({
+          ok: true,
+        });
+      }
+    });
+  });
+
   describe('the re-open reason', () => {
     it('refuses closed → open with no reason', () => {
-      expect(checkStatusMove('closed', 'open', 'STAFF', undefined)).toEqual({
+      expect(checkStatusMove('closed', 'open', 'STAFF', undefined, true)).toEqual({
         ok: false,
         refusal: 'reason-required',
         message: 'A reason is required to re-open a closed ticket.',
@@ -68,7 +101,7 @@ describe('checkStatusMove', () => {
 
     it('refuses closed → open with an empty or whitespace-only reason', () => {
       for (const reason of ['', ' ', '\n\t ']) {
-        expect(checkStatusMove('closed', 'open', 'STAFF', reason)).toEqual({
+        expect(checkStatusMove('closed', 'open', 'STAFF', reason, true)).toEqual({
           ok: false,
           refusal: 'reason-required',
           message: 'A reason is required to re-open a closed ticket.',
@@ -77,7 +110,7 @@ describe('checkStatusMove', () => {
     });
 
     it('records the reason, trimmed, when one is given', () => {
-      expect(checkStatusMove('closed', 'open', 'STAFF', '  Customer replied.  ')).toEqual({
+      expect(checkStatusMove('closed', 'open', 'STAFF', '  Customer replied.  ', true)).toEqual({
         ok: true,
         reason: 'Customer replied.',
       });
@@ -85,14 +118,14 @@ describe('checkStatusMove', () => {
   });
 
   it('records a reason given on any other legal move', () => {
-    expect(checkStatusMove('open', 'in-progress', 'STAFF', ' Picking this up. ')).toEqual({
+    expect(checkStatusMove('open', 'in-progress', 'STAFF', ' Picking this up. ', true)).toEqual({
       ok: true,
       reason: 'Picking this up.',
     });
   });
 
   it('treats an empty reason on a move that does not need one as no reason', () => {
-    expect(checkStatusMove('resolved', 'closed', 'STAFF', '   ')).toEqual({
+    expect(checkStatusMove('resolved', 'closed', 'STAFF', '   ', true)).toEqual({
       ok: true,
       reason: null,
     });

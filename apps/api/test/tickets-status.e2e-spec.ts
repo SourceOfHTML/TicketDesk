@@ -49,7 +49,10 @@ describe('PATCH /api/tickets/:id/status', () => {
   it('moves the Ticket and appends a Status Change by the mover', async () => {
     const requester = await createActor(app);
     const staff = await createActor(app, 'STAFF');
-    const ticket = await createTicket(app, { creatorId: requester.user.id });
+    const ticket = await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: staff.user.id,
+    });
 
     const response = await staff.agent
       .patch(`/api/tickets/${ticket.id}/status`)
@@ -65,7 +68,7 @@ describe('PATCH /api/tickets/:id/status', () => {
       createdAt: ticket.createdAt.toISOString(),
       updatedAt: expect.any(String),
       creator: { id: requester.user.id, email: requester.user.email },
-      assignee: null,
+      assignee: { id: staff.user.id, email: staff.user.email },
     });
 
     const stored = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -89,7 +92,12 @@ describe('PATCH /api/tickets/:id/status', () => {
 
     for (const from of STATUSES) {
       for (const to of STATUSES) {
-        const ticket = await createTicket(app, { creatorId: requester.user.id, status: from });
+        // Every Ticket is assigned, so this loop is about the moves alone.
+        const ticket = await createTicket(app, {
+          creatorId: requester.user.id,
+          status: from,
+          assigneeId: staff.user.id,
+        });
         const response = await staff.agent
           .patch(`/api/tickets/${ticket.id}/status`)
           .send(moveBody(from, to));
@@ -122,10 +130,40 @@ describe('PATCH /api/tickets/:id/status', () => {
     }
   });
 
-  it('records a reason given on any other legal move, trimmed', async () => {
+  it('refuses open → in-progress without an Assignee, and allows it once one is named', async () => {
     const requester = await createActor(app);
     const staff = await createActor(app, 'STAFF');
     const ticket = await createTicket(app, { creatorId: requester.user.id });
+    const path = `/api/tickets/${ticket.id}/status`;
+
+    const refusal = await staff.agent.patch(path).send({ status: 'in-progress' }).expect(400);
+
+    expect(refusal.body).toEqual({
+      statusCode: 400,
+      message: 'A ticket needs an Assignee before it can move to in-progress.',
+      error: 'Bad Request',
+    });
+
+    const stored = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+
+    expect(stored?.status).toBe('open');
+    expect(await prisma.statusChange.count()).toBe(0);
+
+    // Naming an Assignee through the real route is what unlocks the move.
+    await staff.agent
+      .patch(`/api/tickets/${ticket.id}/assign`)
+      .send({ assigneeId: staff.user.id })
+      .expect(200);
+    await staff.agent.patch(path).send({ status: 'in-progress' }).expect(200);
+  });
+
+  it('records a reason given on any other legal move, trimmed', async () => {
+    const requester = await createActor(app);
+    const staff = await createActor(app, 'STAFF');
+    const ticket = await createTicket(app, {
+      creatorId: requester.user.id,
+      assigneeId: staff.user.id,
+    });
 
     await staff.agent
       .patch(`/api/tickets/${ticket.id}/status`)
@@ -278,7 +316,11 @@ describe('PATCH /api/tickets/:id/status', () => {
       requester = await createActor(app);
       otherRequester = await createActor(app);
       staff = await createActor(app, 'STAFF');
-      const ticket = await createTicket(app, { creatorId: requester.user.id });
+      // Assigned, so the matrix is about who may move it, not whether it can.
+      const ticket = await createTicket(app, {
+        creatorId: requester.user.id,
+        assigneeId: staff.user.id,
+      });
       ticketId = ticket.id;
       path = `/api/tickets/${ticket.id}/status`;
     });

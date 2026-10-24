@@ -226,7 +226,7 @@ export class TicketsService {
   async updateStatus(user: UserSummary, id: string, input: UpdateStatusInput): Promise<Ticket> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, assigneeId: true },
     });
 
     if (ticket === null) {
@@ -234,7 +234,13 @@ export class TicketsService {
     }
 
     const from = statusSchema.parse(ticket.status);
-    const verdict = checkStatusMove(from, input.status, user.role, input.reason);
+    const verdict = checkStatusMove(
+      from,
+      input.status,
+      user.role,
+      input.reason,
+      ticket.assigneeId !== null,
+    );
 
     if (!verdict.ok) {
       if (verdict.refusal === 'not-staff') {
