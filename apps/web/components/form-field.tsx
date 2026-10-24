@@ -132,7 +132,7 @@ function FieldErrors({ id, errors }: { id: string; errors: string[] }) {
   }
 
   return (
-    <ul id={`${id}-errors`}>
+    <ul id={`${id}-errors`} className="field-errors">
       {errors.map((message, index) => (
         <li key={`${id}-${index}`}>{message}</li>
       ))}
