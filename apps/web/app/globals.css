@@ -114,7 +114,7 @@ form label {
 }
 
 /* A radio's label sits beside its control, not above it. */
-form .radio-group label {
+.radio-group label {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -196,7 +196,9 @@ td {
   margin-bottom: 0;
 }
 
-.staff-control label {
+/* The label above a select or text field; a radio's label stays beside its
+   control. Scoped past the fieldset so it cannot outrank `.radio-group`. */
+.staff-control > div > label {
   display: block;
   margin-bottom: 0.25rem;
 }
