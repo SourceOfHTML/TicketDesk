@@ -14,3 +14,10 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   medium: 'Medium',
   high: 'High',
 };
+
+/** A label record as the options of a `<select>` or a group of checkboxes. */
+export function optionsOf<T extends string>(
+  labels: Record<T, string>,
+): Array<{ value: T; label: string }> {
+  return (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
+}

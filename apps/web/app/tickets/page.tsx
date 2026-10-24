@@ -6,13 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ErrorBanner } from '../../components/error-banner';
 import { sessionRequest } from '../../lib/api';
 import { normalizeError, type FormErrors } from '../../lib/form-errors';
-import { PRIORITY_LABELS, STATUS_LABELS } from '../../lib/ticket-labels';
-
-function optionsOf<T extends string>(
-  labels: Record<T, string>,
-): Array<{ value: T; label: string }> {
-  return (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
-}
+import { optionsOf, PRIORITY_LABELS, STATUS_LABELS } from '../../lib/ticket-labels';
 
 const STATUS_OPTIONS = optionsOf(STATUS_LABELS);
 const PRIORITY_OPTIONS = optionsOf(PRIORITY_LABELS);
@@ -119,6 +113,10 @@ export default function TicketsPage() {
   return (
     <section aria-labelledby="tickets-heading">
       <h1 id="tickets-heading">Tickets</h1>
+
+      <p>
+        <Link href="/tickets/new">Raise a ticket</Link>
+      </p>
 
       <div role="group" aria-label="Filters">
         <FilterFieldset

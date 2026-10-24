@@ -35,6 +35,13 @@ fieldset label {
   margin-right: 0.75rem;
 }
 
+/* Inherited, or a textarea and a select fall back to the browser's own fonts. */
+input,
+textarea,
+select {
+  font: inherit;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
