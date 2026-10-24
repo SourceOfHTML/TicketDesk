@@ -67,7 +67,7 @@ export const createTicketSchema = z.strictObject({
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 
 /**
- * Posting a Comment. The body is the whole message: who wrote it and when is
+ * Posting a Comment. The body is the whole Comment: who wrote it and when is
  * fixed by the act of posting it, and a Comment is never edited or deleted.
  */
 export const createCommentSchema = z.strictObject({

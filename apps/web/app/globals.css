@@ -52,9 +52,11 @@ textarea {
   padding: 0.5rem 0.6rem;
 }
 
-/* A Ticket's title and description have more to say than an email address. */
+/* A Ticket's title and description, and a Comment, have more to say than an
+   email address. */
 .ticket-form input[type='text'],
-.ticket-form textarea {
+.ticket-form textarea,
+.comment-form textarea {
   max-width: none;
 }
 
@@ -218,13 +220,9 @@ td {
   white-space: pre-wrap;
 }
 
-/* The composer sits below the thread it adds to, at the thread's width. */
+/* The composer sits below the thread it adds to. */
 .comment-form {
   margin-top: 1rem;
-}
-
-.comment-form textarea {
-  max-width: none;
 }
 
 /* The audit trail is the last thing a reader checks, so it stays outside the

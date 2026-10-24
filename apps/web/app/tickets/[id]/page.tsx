@@ -12,7 +12,7 @@ import { STATUS_LABELS } from '../../../lib/ticket-labels';
 import { PriorityBadge, StatusBadge } from '../../../components/ticket-badges';
 import { useMutation } from '../../../lib/use-mutation';
 
-/** The only field a Comment message may be attached to. */
+/** The only form field a Comment's errors may be attached to. */
 const COMMENT_FIELDS = ['body'] as const;
 
 export default function TicketPage() {
@@ -47,7 +47,10 @@ export default function TicketPage() {
         }
 
         if (result.ok) {
+          // A refetch that works replaces the thread and the failure that kept
+          // it from loading; a stale banner must not outlive its cause.
           setTicket(result.data);
+          setFailure(null);
         } else if (result.error.statusCode === 404) {
           setNotFound(true);
         } else {
@@ -178,6 +181,9 @@ export default function TicketPage() {
 function CommentComposer({ ticketId, onPosted }: { ticketId: string; onPosted: () => void }) {
   const [body, setBody] = useState('');
   const [errors, setErrors] = useState<FormErrors>(emptyFormErrors);
+  // The thread appears above the composer, out of the reader's way; a written
+  // Comment is announced rather than left to be noticed.
+  const [posted, setPosted] = useState(false);
 
   const mutation = useMutation(
     () =>
@@ -191,6 +197,7 @@ function CommentComposer({ ticketId, onPosted }: { ticketId: string; onPosted: (
       // new Comment arrives with the server's own ordering and timestamps.
       onSuccess: () => {
         setBody('');
+        setPosted(true);
         onPosted();
       },
     },
@@ -204,10 +211,11 @@ function CommentComposer({ ticketId, onPosted }: { ticketId: string; onPosted: (
     }
 
     setErrors(emptyFormErrors());
+    setPosted(false);
     const result = await mutation.run();
 
-    // A failed post keeps the typed body: nothing was written, so the text is
-    // still the author's to fix or retry.
+    // A failed submission keeps the typed body: nothing was written, so the
+    // text is still the author's to fix or retry.
     if (result !== undefined && !result.ok) {
       setErrors(normalizeError(result.error, COMMENT_FIELDS));
     }
@@ -235,6 +243,7 @@ function CommentComposer({ ticketId, onPosted }: { ticketId: string; onPosted: (
       <button type="submit" disabled={mutation.pending}>
         Post comment
       </button>
+      {posted ? <p role="status">Comment posted.</p> : null}
     </form>
   );
 }
