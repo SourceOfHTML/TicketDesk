@@ -108,25 +108,26 @@ export default function TicketPage() {
                 <dt>Assignee</dt>
                 <dd>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</dd>
               </dl>
-
-              <section className="ticket-comments" aria-labelledby="comments-heading">
-                <h2 id="comments-heading">Comments</h2>
-                {ticket.comments.length === 0 ? (
-                  <p>No comments yet.</p>
-                ) : (
-                  <ul role="list" className="comment-list">
-                    {ticket.comments.map((comment) => (
-                      <li key={comment.id}>
-                        <p className="comment-meta">
-                          <strong>{comment.author.email}</strong> · <Time iso={comment.createdAt} />
-                        </p>
-                        <p className="comment-body">{comment.body}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
             </article>
+
+            <section className="ticket-comments" aria-labelledby="comments-heading">
+              <h2 id="comments-heading">Comments</h2>
+              {ticket.comments.length === 0 ? (
+                <p>No comments yet.</p>
+              ) : (
+                <ul role="list" className="comment-list">
+                  {ticket.comments.map((comment) => (
+                    <li key={comment.id} className="comment">
+                      <p className="comment-meta">
+                        <strong>{comment.author.email}</strong>
+                        <Time iso={comment.createdAt} />
+                      </p>
+                      <p className="comment-body">{comment.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
 
             <section className="ticket-history" aria-labelledby="status-changes-heading">
               <h2 id="status-changes-heading">Status changes</h2>
