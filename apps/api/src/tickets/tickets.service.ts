@@ -46,9 +46,9 @@ export class TicketsService {
   /**
    * One Ticket with both of its threads, ascending. Missing authorization is a
    * 403, never a 404 — only an absent Ticket is a 404, which is why the lookup
-   * happens before the ownership check.
+   * happens before the Requester check.
    */
-  async get(user: UserSummary, id: string): Promise<TicketDetail> {
+  async detail(user: UserSummary, id: string): Promise<TicketDetail> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       include: {

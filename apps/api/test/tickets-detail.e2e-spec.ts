@@ -1,8 +1,9 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createActor } from './actors';
+import { createActor, type Actor } from './actors';
 import { createTestApp, resetDb } from './app';
+import { sessionTokenOf, setCookies } from './cookies';
 import { createComment, createStatusChange, createTicket } from './tickets';
 
 describe('GET /api/tickets/:id', () => {
@@ -48,7 +49,7 @@ describe('GET /api/tickets/:id', () => {
     expect(response.text).not.toContain('passwordHash');
   });
 
-  it('returns Comments and Status Changes ascending, each with its author or changer', async () => {
+  it('returns Comments and Status Changes ascending, each with its author or mover', async () => {
     const requester = await createActor(app);
     const staff = await createActor(app, 'STAFF');
     const ticket = await createTicket(app, { creatorId: requester.user.id });
@@ -110,18 +111,44 @@ describe('GET /api/tickets/:id', () => {
     expect(response.text).not.toContain('passwordHash');
   });
 
-  it('answers by actor: anonymous 401, owner 200, other Requester 403, Staff 200', async () => {
-    const owner = await createActor(app);
-    const otherRequester = await createActor(app);
-    const staff = await createActor(app, 'STAFF');
-    const ticket = await createTicket(app, { creatorId: owner.user.id });
-    const path = `/api/tickets/${ticket.id}`;
+  describe('by actor', () => {
+    let requester: Actor;
+    let otherRequester: Actor;
+    let staff: Actor;
+    let path: string;
 
-    await request(app.getHttpServer()).get(path).expect(401);
-    await owner.agent.get(path).expect(200);
-    // Missing authorization is a 403, never a 404: the Ticket exists.
-    await otherRequester.agent.get(path).expect(403);
-    await staff.agent.get(path).expect(200);
+    beforeEach(async () => {
+      requester = await createActor(app);
+      otherRequester = await createActor(app);
+      staff = await createActor(app, 'STAFF');
+      const ticket = await createTicket(app, { creatorId: requester.user.id });
+      path = `/api/tickets/${ticket.id}`;
+    });
+
+    it('anonymous: 401', async () => {
+      await request(app.getHttpServer()).get(path).expect(401);
+    });
+
+    it('the Requester who raised it: 200', async () => {
+      await requester.agent.get(path).expect(200);
+    });
+
+    it('another Requester: 403 with a refreshed session cookie', async () => {
+      // Missing authorization is a 403, never a 404: the Ticket exists.
+      const forbidden = await otherRequester.agent.get(path).expect(403);
+
+      expect(sessionTokenOf(setCookies(forbidden)[0] ?? '')).toBe(
+        sessionTokenOf(setCookies(otherRequester.loginResponse)[0] ?? ''),
+      );
+    });
+
+    it('Staff: 200 with a refreshed session cookie', async () => {
+      const response = await staff.agent.get(path).expect(200);
+
+      expect(sessionTokenOf(setCookies(response)[0] ?? '')).toBe(
+        sessionTokenOf(setCookies(staff.loginResponse)[0] ?? ''),
+      );
+    });
   });
 
   it('answers 404, never 400, for a nonexistent or malformed id', async () => {
