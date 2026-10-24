@@ -75,6 +75,25 @@ export const createCommentSchema = z.strictObject({
 });
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 
+/**
+ * A Staff member's correction of the Requester's assessment. Priority is set at
+ * creation by the Requester and changed only here; the Ticket is otherwise
+ * immutable.
+ */
+export const updatePrioritySchema = z.strictObject({
+  priority: prioritySchema,
+});
+export type UpdatePriorityInput = z.infer<typeof updatePrioritySchema>;
+
+/**
+ * Assigning a Ticket to Staff, or `null` to leave it unassigned. Whether the
+ * named User is Staff is the domain's question, not the schema's.
+ */
+export const updateAssigneeSchema = z.strictObject({
+  assigneeId: z.string().min(1).nullable(),
+});
+export type UpdateAssigneeInput = z.infer<typeof updateAssigneeSchema>;
+
 /** Any string is a well-formed id; an unknown one is a 404 from the service. */
 export const ticketParamsSchema = z.strictObject({
   id: z.string().min(1),

@@ -1,14 +1,15 @@
 'use client';
 
-import type { Comment, TicketDetail } from '@ticketdesk/shared';
+import type { Comment, Ticket, TicketDetail, UserRef } from '@ticketdesk/shared';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ErrorBanner } from '../../../components/error-banner';
 import { TextAreaField } from '../../../components/form-field';
-import { sessionRequest } from '../../../lib/api';
+import { useSession } from '../../../components/session-provider';
+import { sessionRequest, type ApiResult } from '../../../lib/api';
 import { emptyFormErrors, normalizeError, type FormErrors } from '../../../lib/form-errors';
-import { STATUS_LABELS } from '../../../lib/ticket-labels';
+import { PRIORITY_OPTIONS, STATUS_LABELS } from '../../../lib/ticket-labels';
 import { PriorityBadge, StatusBadge } from '../../../components/ticket-badges';
 import { useMutation } from '../../../lib/use-mutation';
 
@@ -17,6 +18,11 @@ const COMMENT_FIELDS = ['body'] as const;
 
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
+  // Null until `/me` answers — and null then — so no Staff control renders
+  // before the Role is known.
+  const { user } = useSession();
+  const isStaff = user?.role === 'STAFF';
+
   // Null until the fetch answers. That is the only loading state: static chrome
   // is always on screen, and nothing pretends to be content.
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
@@ -24,9 +30,14 @@ export default function TicketPage() {
   // A 404 is a definitive answer, not a failed load, so it is its own state.
   const [notFound, setNotFound] = useState(false);
   const [requestInFlight, setRequestInFlight] = useState(true);
-  // Bumped when a Comment is posted. The same fetch already knows how to load
-  // the thread, so posting clears the composer and asks it again.
-  const [threadVersion, setThreadVersion] = useState(0);
+  // The Staff directory for the assignee picker. Fetched only once the Ticket
+  // has loaded, and only for Staff.
+  const [staff, setStaff] = useState<UserRef[] | null>(null);
+  const [staffFailure, setStaffFailure] = useState<FormErrors | null>(null);
+  // Bumped when a write lands. The same fetch already knows how to load the
+  // Ticket, so a posted Comment or a changed Priority or Assignee asks it again
+  // without clearing what is on screen.
+  const [reloadVersion, setReloadVersion] = useState(0);
 
   // A different Ticket starts from nothing; a refetch of the same one keeps it
   // on screen, unmarked.
@@ -66,7 +77,36 @@ export default function TicketPage() {
     return () => {
       active = false;
     };
-  }, [id, threadVersion]);
+  }, [id, reloadVersion]);
+
+  // The directory the picker offers. The Ticket fetch comes first: until it
+  // succeeds there is no Staff panel to fill.
+  const ticketLoaded = ticket !== null;
+
+  useEffect(() => {
+    if (!isStaff || !ticketLoaded) {
+      return;
+    }
+
+    let active = true;
+
+    void sessionRequest<UserRef[]>('/api/staff').then((result) => {
+      if (!active) {
+        return;
+      }
+
+      if (result.ok) {
+        setStaff(result.data);
+        setStaffFailure(null);
+      } else {
+        setStaffFailure(normalizeError(result.error, []));
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isStaff, ticketLoaded]);
 
   if (notFound) {
     return (
@@ -123,6 +163,15 @@ export default function TicketPage() {
               </dl>
             </article>
 
+            {isStaff ? (
+              <StaffPanel
+                ticket={ticket}
+                staff={staff}
+                directoryFailure={staffFailure}
+                onChanged={() => setReloadVersion((version) => version + 1)}
+              />
+            ) : null}
+
             <section className="ticket-comments" aria-labelledby="comments-heading">
               <h2 id="comments-heading">Comments</h2>
               {ticket.comments.length === 0 ? (
@@ -146,7 +195,7 @@ export default function TicketPage() {
               {ticket.status === 'closed' ? null : (
                 <CommentComposer
                   ticketId={ticket.id}
-                  onPosted={() => setThreadVersion((version) => version + 1)}
+                  onPosted={() => setReloadVersion((version) => version + 1)}
                 />
               )}
             </section>
@@ -175,6 +224,155 @@ export default function TicketPage() {
         )}
       </div>
     </section>
+  );
+}
+
+interface StaffPanelProps {
+  ticket: TicketDetail;
+  /** Null until the directory answers; a failed fetch leaves it null. */
+  staff: UserRef[] | null;
+  directoryFailure: FormErrors | null;
+  /** Refetches the Ticket, so both controls show the server's own values. */
+  onChanged: () => void;
+}
+
+/**
+ * Staff-only: the two direct PATCH controls, each freezing only itself. The
+ * panel is presentation; the API refuses a Requester whatever the UI renders.
+ */
+function StaffPanel({ ticket, staff, directoryFailure, onChanged }: StaffPanelProps) {
+  // Everyone the picker may name. The current Assignee is always present, even
+  // while the directory is still unknown, so the picker never misreports.
+  const assigneeOptions = [
+    { value: '', label: 'Unassigned' },
+    ...(ticket.assignee === null
+      ? []
+      : [{ value: ticket.assignee.id, label: ticket.assignee.email }]),
+    ...(staff ?? [])
+      .filter((member) => member.id !== ticket.assignee?.id)
+      .map((member) => ({ value: member.id, label: member.email })),
+  ];
+
+  return (
+    <section className="staff-panel" aria-labelledby="staff-panel-heading">
+      <h2 id="staff-panel-heading">Staff</h2>
+
+      {directoryFailure === null ? null : (
+        <ErrorBanner
+          messages={directoryFailure.banner}
+          details={directoryFailure.statusCode >= 500 ? directoryFailure.details : undefined}
+        />
+      )}
+
+      <StaffControl
+        id="staff-priority"
+        label="Priority"
+        value={ticket.priority}
+        options={PRIORITY_OPTIONS}
+        save={(priority) =>
+          sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/priority`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ priority }),
+          })
+        }
+        onSaved={onChanged}
+      />
+
+      <StaffControl
+        id="staff-assignee"
+        label="Assignee"
+        value={ticket.assignee?.id ?? ''}
+        options={assigneeOptions}
+        // Without the directory the picker can only offer the current Assignee
+        // and unassigning, so it waits for the full list before it writes.
+        disabled={staff === null}
+        save={(assigneeId) =>
+          sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/assign`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ assigneeId: assigneeId === '' ? null : assigneeId }),
+          })
+        }
+        onSaved={onChanged}
+      />
+    </section>
+  );
+}
+
+interface StaffControlProps {
+  id: string;
+  label: string;
+  /** The Ticket's current value. The select always shows the server's answer. */
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  disabled?: boolean;
+  /** One chosen value, written by a direct PATCH. */
+  save: (value: string) => Promise<ApiResult<Ticket>>;
+  onSaved: () => void;
+}
+
+/**
+ * One direct PATCH control. The chosen value goes into a ref so the write in
+ * this same event sees it; the select stays bound to the Ticket, so a failure
+ * leaves the current value visible and a success swaps it after the refetch.
+ */
+function StaffControl({
+  id,
+  label,
+  value,
+  options,
+  disabled = false,
+  save,
+  onSaved,
+}: StaffControlProps) {
+  const [errors, setErrors] = useState<FormErrors | null>(null);
+  const chosen = useRef(value);
+
+  const mutation = useMutation(() => save(chosen.current), {
+    onSuccess: () => {
+      setErrors(null);
+      onSaved();
+    },
+  });
+
+  async function onChange(next: string): Promise<void> {
+    if (mutation.pending) {
+      return;
+    }
+
+    chosen.current = next;
+    setErrors(null);
+    const result = await mutation.run();
+
+    if (result !== undefined && !result.ok) {
+      setErrors(normalizeError(result.error, []));
+    }
+  }
+
+  return (
+    <div className="staff-control" aria-busy={mutation.pending ? true : undefined}>
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        name={id}
+        value={value}
+        disabled={mutation.pending || disabled}
+        onChange={(event) => void onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {errors === null ? null : (
+        <ErrorBanner
+          messages={errors.banner}
+          details={errors.statusCode >= 500 ? errors.details : undefined}
+        />
+      )}
+    </div>
   );
 }
 
