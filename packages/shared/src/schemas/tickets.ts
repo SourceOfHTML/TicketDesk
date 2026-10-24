@@ -66,6 +66,15 @@ export const createTicketSchema = z.strictObject({
 });
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 
+/**
+ * Posting a Comment. The body is the whole message: who wrote it and when is
+ * fixed by the act of posting it, and a Comment is never edited or deleted.
+ */
+export const createCommentSchema = z.strictObject({
+  body: z.string().min(1).max(10_000),
+});
+export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+
 /** Any string is a well-formed id; an unknown one is a 404 from the service. */
 export const ticketParamsSchema = z.strictObject({
   id: z.string().min(1),

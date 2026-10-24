@@ -1,7 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  commentSchema,
   ticketDetailSchema,
   ticketSchema,
+  type Comment,
+  type CreateCommentInput,
   type CreateTicketInput,
   type Ticket,
   type TicketDetail,
@@ -110,5 +113,38 @@ export class TicketsService {
         createdAt: change.createdAt.toISOString(),
       })),
     });
+  }
+
+  /** A Comment is written once; there is no edit or delete path to balance it. */
+  async createComment(
+    user: UserSummary,
+    ticketId: string,
+    input: CreateCommentInput,
+  ): Promise<Comment> {
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { creatorId: true, status: true },
+    });
+
+    if (ticket === null) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (user.role !== 'STAFF' && ticket.creatorId !== user.id) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    // `closed` is the end of a Ticket's life; `resolved` only pauses it. The
+    // composer's absence is a courtesy — this is the enforcement.
+    if (ticket.status === 'closed') {
+      throw new ForbiddenException('This ticket is closed.');
+    }
+
+    const comment = await this.prisma.comment.create({
+      data: { ticketId, authorId: user.id, body: input.body },
+      include: { author: { select: USER_REF } },
+    });
+
+    return commentSchema.parse({ ...comment, createdAt: comment.createdAt.toISOString() });
   }
 }

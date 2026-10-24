@@ -1,8 +1,11 @@
 import { Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import {
+  createCommentSchema,
   createTicketSchema,
   ticketListQuerySchema,
   ticketParamsSchema,
+  type Comment,
+  type CreateCommentInput,
   type CreateTicketInput,
   type Ticket,
   type TicketDetail,
@@ -40,5 +43,14 @@ export class TicketsController {
     @ZodParam(ticketParamsSchema) params: TicketParams,
   ): Promise<TicketDetail> {
     return this.ticketsService.detail(request.user, params.id);
+  }
+
+  @Post(':id/comments')
+  createComment(
+    @Req() request: AuthenticatedRequest,
+    @ZodParam(ticketParamsSchema) params: TicketParams,
+    @ZodBody(createCommentSchema) input: CreateCommentInput,
+  ): Promise<Comment> {
+    return this.ticketsService.createComment(request.user, params.id, input);
   }
 }

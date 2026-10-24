@@ -218,6 +218,15 @@ td {
   white-space: pre-wrap;
 }
 
+/* The composer sits below the thread it adds to, at the thread's width. */
+.comment-form {
+  margin-top: 1rem;
+}
+
+.comment-form textarea {
+  max-width: none;
+}
+
 /* The audit trail is the last thing a reader checks, so it stays outside the
    frame and a size down. */
 .ticket-history {
