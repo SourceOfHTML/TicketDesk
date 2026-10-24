@@ -75,7 +75,12 @@ export default function NewTicketPage() {
 
       {/* The whole form freezes: a second submission would create a second
           Ticket. */}
-      <form onSubmit={onSubmit} noValidate aria-busy={mutation.pending ? true : undefined}>
+      <form
+        className="ticket-form"
+        onSubmit={onSubmit}
+        noValidate
+        aria-busy={mutation.pending ? true : undefined}
+      >
         <FormField
           id="title"
           label="Title"

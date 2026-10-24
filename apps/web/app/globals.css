@@ -41,13 +41,21 @@ textarea {
   font: inherit;
 }
 
-/* Fields take the full form width: a cramped box reads as an afterthought. */
+/* Fields share one box, sized for a short answer: sign-in and sign-up should
+   not sprawl across the page. */
 input[type='text'],
 input[type='password'],
 textarea {
   box-sizing: border-box;
   width: 100%;
+  max-width: 20rem;
   padding: 0.5rem 0.6rem;
+}
+
+/* A Ticket's title and description have more to say than an email address. */
+.ticket-form input[type='text'],
+.ticket-form textarea {
+  max-width: none;
 }
 
 /* The description is a fixed seven-line box; dragging it only breaks the form. */
