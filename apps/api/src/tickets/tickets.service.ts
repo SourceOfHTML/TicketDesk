@@ -24,7 +24,7 @@ import {
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { USER_REF } from '../users/user-ref';
-import { checkStatusTransition } from './status-transition';
+import { checkStatusMove } from './status-move';
 
 /** Every Ticket response embeds its Requester and Assignee, never whole Users. */
 const TICKET_INCLUDE = { creator: { select: USER_REF }, assignee: { select: USER_REF } } as const;
@@ -220,8 +220,8 @@ export class TicketsService {
 
   /**
    * Moving a Ticket along its life. The rule decides legality and what the
-   * Status Change records; the Ticket and its audit entry move together or not
-   * at all, so the history can never disagree with the Status it explains.
+   * Status Change records; the Ticket and its Status Change move together or
+   * not at all, so the history can never disagree with the Status it explains.
    */
   async updateStatus(user: UserSummary, id: string, input: UpdateStatusInput): Promise<Ticket> {
     const ticket = await this.prisma.ticket.findUnique({
@@ -234,7 +234,7 @@ export class TicketsService {
     }
 
     const from = statusSchema.parse(ticket.status);
-    const verdict = checkStatusTransition(from, input.status, user.role, input.reason);
+    const verdict = checkStatusMove(from, input.status, user.role, input.reason);
 
     if (!verdict.ok) {
       if (verdict.refusal === 'not-staff') {

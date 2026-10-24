@@ -12,6 +12,8 @@ interface FormFieldProps {
   errors?: string[];
   disabled?: boolean;
   autoComplete?: string;
+  /** For a field that is required, without the banned native `required`. */
+  ariaRequired?: boolean;
 }
 
 export function FormField({
@@ -23,6 +25,7 @@ export function FormField({
   errors = [],
   disabled = false,
   autoComplete,
+  ariaRequired = false,
 }: FormFieldProps) {
   return (
     <div>
@@ -35,6 +38,7 @@ export function FormField({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         autoComplete={autoComplete}
+        aria-required={ariaRequired ? true : undefined}
         {...fieldAria(id, errors)}
       />
       <FieldErrors id={id} errors={errors} />

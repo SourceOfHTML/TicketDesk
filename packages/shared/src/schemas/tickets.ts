@@ -97,7 +97,7 @@ export type UpdateAssigneeInput = z.infer<typeof updateAssigneeSchema>;
 /**
  * Moving a Ticket's Status. Which moves are legal — and whether the reason is
  * required — is the domain's question, not the schema's. Only its length is
- * here, because a Status Change records it verbatim.
+ * here, because a Status Change stores it.
  */
 export const updateStatusSchema = z.strictObject({
   status: statusSchema,

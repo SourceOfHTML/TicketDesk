@@ -74,7 +74,7 @@ export class TicketsController {
     return this.ticketsService.updateAssignee(params.id, input);
   }
 
-  /** Staff only: moving the Ticket along its six legal transitions. */
+  /** Staff only: moving the Ticket along its six legal moves. */
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles('STAFF')
