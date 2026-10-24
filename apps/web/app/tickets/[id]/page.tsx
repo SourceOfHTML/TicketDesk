@@ -70,19 +70,26 @@ export default function TicketPage() {
   return (
     <section>
       {failure === null ? null : (
-        <ErrorBanner
-          messages={failure.banner}
-          details={failure.statusCode >= 500 ? failure.details : undefined}
-        />
+        <>
+          <ErrorBanner
+            messages={failure.banner}
+            details={failure.statusCode >= 500 ? failure.details : undefined}
+          />
+          {failure.statusCode === 403 ? (
+            <p>
+              <Link href="/tickets">Back to tickets</Link>
+            </p>
+          ) : null}
+        </>
       )}
 
       <div aria-busy={firstLoadInFlight ? true : undefined}>
         {ticket === null ? null : (
-          <>
-            <h1>{ticket.title}</h1>
+          <article className="ticket" aria-labelledby="ticket-heading">
+            <h1 id="ticket-heading">{ticket.title}</h1>
             <p className="ticket-description">{ticket.description}</p>
 
-            <dl>
+            <dl className="ticket-meta">
               <dt>Status</dt>
               <dd>
                 <span className={`badge badge-${ticket.status}`}>
@@ -101,7 +108,7 @@ export default function TicketPage() {
               <dd>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</dd>
             </dl>
 
-            <section aria-labelledby="comments-heading">
+            <section className="ticket-section" aria-labelledby="comments-heading">
               <h2 id="comments-heading">Comments</h2>
               {ticket.comments.length === 0 ? (
                 <p>No comments yet.</p>
@@ -110,7 +117,7 @@ export default function TicketPage() {
                   {ticket.comments.map((comment) => (
                     <li key={comment.id}>
                       <p>{comment.body}</p>
-                      <p>
+                      <p className="ticket-byline">
                         {comment.author.email} · <Time iso={comment.createdAt} />
                       </p>
                     </li>
@@ -119,7 +126,7 @@ export default function TicketPage() {
               )}
             </section>
 
-            <section aria-labelledby="status-changes-heading">
+            <section className="ticket-section" aria-labelledby="status-changes-heading">
               <h2 id="status-changes-heading">Status changes</h2>
               {ticket.statusChanges.length === 0 ? (
                 <p>No status changes yet.</p>
@@ -131,7 +138,7 @@ export default function TicketPage() {
                         {STATUS_LABELS[change.fromStatus]} → {STATUS_LABELS[change.toStatus]}
                       </p>
                       {change.reason === null ? null : <p>{change.reason}</p>}
-                      <p>
+                      <p className="ticket-byline">
                         {change.changedBy.email} · <Time iso={change.createdAt} />
                       </p>
                     </li>
@@ -139,7 +146,7 @@ export default function TicketPage() {
                 </ul>
               )}
             </section>
-          </>
+          </article>
         )}
       </div>
     </section>

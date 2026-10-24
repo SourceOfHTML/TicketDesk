@@ -47,8 +47,46 @@ td {
   text-align: left;
 }
 
+.ticket {
+  border: 1px solid #d4d4d4;
+  padding: 1.25rem;
+}
+
 .ticket-description {
   white-space: pre-wrap;
+}
+
+/* One label/value pair per row, so the facts read as a block rather than prose. */
+.ticket-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 1.25rem 0 0;
+}
+
+.ticket-meta dd {
+  margin: 0;
+}
+
+/* Each section owns its separator, so the frame needs no inner wrappers. */
+.ticket-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #d4d4d4;
+}
+
+.ticket-section h2 {
+  margin: 0 0 0.5rem;
+}
+
+.ticket-section ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ticket-byline {
+  color: #4b5563;
+  font-size: 0.9em;
 }
 
 .badge {
