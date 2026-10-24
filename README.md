@@ -47,6 +47,17 @@ gate can also be run alone: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, 
 `pnpm format` rewrites formatting. GitHub Actions runs `pnpm bootstrap` and then `pnpm gates` on
 every push, pull request, and manual dispatch.
 
+## The Set-Cookie smoke job
+
+```sh
+pnpm smoke:cookie   # needs curl; owns its setup, database included
+```
+
+It proves against the real built apps that the session cookie survives the Next rewrite and is
+refreshed on replay — the one undocumented behaviour the auth design rests on. It takes a couple of
+minutes, needs ports 3000 and 3001 to itself, and is deliberately outside `pnpm gates`:
+`.github/workflows/smoke-cookie.yml` runs it, and it is not a required status check.
+
 ## Why the API dev server uses SWC
 
 `tsx` compiles with esbuild, which does not emit `design:paramtypes`. Nest then constructs controllers
