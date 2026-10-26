@@ -127,11 +127,13 @@ export default function TicketPage() {
 
   if (notFound) {
     return (
-      <section>
+      <section className="empty-state">
         <h1>Ticket not found</h1>
         <p>This ticket doesn&apos;t exist, or the link is wrong.</p>
         <p>
-          <Link href="/tickets">Back to tickets</Link>
+          <Link className="back-link" href="/tickets">
+            Back to tickets
+          </Link>
         </p>
       </section>
     );
@@ -151,13 +153,18 @@ export default function TicketPage() {
           />
           {failure.statusCode === 403 ? (
             <p>
-              <Link href="/tickets">Back to tickets</Link>
+              <Link className="back-link" href="/tickets">
+                Back to tickets
+              </Link>
             </p>
           ) : null}
         </>
       )}
 
-      <div aria-busy={firstLoadInFlight ? true : undefined}>
+      <div
+        className={isStaff ? 'ticket-layout ticket-layout-staff' : 'ticket-layout'}
+        aria-busy={firstLoadInFlight ? true : undefined}
+      >
         {ticket === null ? null : (
           <>
             <article className="ticket" aria-labelledby="ticket-heading">
@@ -165,18 +172,26 @@ export default function TicketPage() {
               <p className="ticket-description">{ticket.description}</p>
 
               <dl className="ticket-meta">
-                <dt>Status</dt>
-                <dd>
-                  <StatusBadge status={ticket.status} />
-                </dd>
-                <dt>Priority</dt>
-                <dd>
-                  <PriorityBadge priority={ticket.priority} />
-                </dd>
-                <dt>Requester</dt>
-                <dd>{ticket.creator.email}</dd>
-                <dt>Assignee</dt>
-                <dd>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</dd>
+                <div className="ticket-fact">
+                  <dt>Status</dt>
+                  <dd>
+                    <StatusBadge status={ticket.status} />
+                  </dd>
+                </div>
+                <div className="ticket-fact">
+                  <dt>Priority</dt>
+                  <dd>
+                    <PriorityBadge priority={ticket.priority} />
+                  </dd>
+                </div>
+                <div className="ticket-fact">
+                  <dt>Requester</dt>
+                  <dd>{ticket.creator.email}</dd>
+                </div>
+                <div className="ticket-fact">
+                  <dt>Assignee</dt>
+                  <dd>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</dd>
+                </div>
               </dl>
             </article>
 
@@ -192,7 +207,7 @@ export default function TicketPage() {
             <section className="ticket-comments" aria-labelledby="comments-heading">
               <h2 id="comments-heading">Comments</h2>
               {ticket.comments.length === 0 ? (
-                <p>No comments yet.</p>
+                <p className="empty">No comments yet.</p>
               ) : (
                 <ul role="list" className="comment-list">
                   {ticket.comments.map((comment) => (
@@ -220,9 +235,9 @@ export default function TicketPage() {
             <section className="ticket-history" aria-labelledby="status-changes-heading">
               <h2 id="status-changes-heading">Status changes</h2>
               {ticket.statusChanges.length === 0 ? (
-                <p>No status changes yet.</p>
+                <p className="empty">No status changes yet.</p>
               ) : (
-                <ul>
+                <ul className="timeline">
                   {ticket.statusChanges.map((change) => (
                     <li key={change.id}>
                       <p>
@@ -282,25 +297,27 @@ function StaffPanel({ ticket, staff, directoryFailure, onChanged }: StaffPanelPr
         />
       )}
 
-      <PriorityControl ticket={ticket} onChanged={onChanged} />
+      <div className="staff-panel-controls">
+        <PriorityControl ticket={ticket} onChanged={onChanged} />
 
-      <AssigneeControl
-        value={ticket.assignee?.id ?? ''}
-        options={assigneeOptions}
-        // Without the directory the picker can only offer the current Assignee
-        // and unassigning, so it waits for the full list before it writes.
-        disabled={staff === null}
-        save={(assigneeId) =>
-          sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/assign`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ assigneeId: assigneeId === '' ? null : assigneeId }),
-          })
-        }
-        onSaved={onChanged}
-      />
+        <AssigneeControl
+          value={ticket.assignee?.id ?? ''}
+          options={assigneeOptions}
+          // Without the directory the picker can only offer the current Assignee
+          // and unassigning, so it waits for the full list before it writes.
+          disabled={staff === null}
+          save={(assigneeId) =>
+            sessionRequest<Ticket>(`/api/tickets/${encodeURIComponent(ticket.id)}/assign`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ assigneeId: assigneeId === '' ? null : assigneeId }),
+            })
+          }
+          onSaved={onChanged}
+        />
 
-      <StatusForm ticket={ticket} onChanged={onChanged} />
+        <StatusForm ticket={ticket} onChanged={onChanged} />
+      </div>
     </section>
   );
 }
@@ -490,7 +507,7 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
 
   return (
     <form
-      className="staff-control"
+      className="staff-control staff-control-status"
       onSubmit={onSubmit}
       noValidate
       aria-busy={mutation.pending ? true : undefined}
@@ -521,7 +538,11 @@ function StatusForm({ ticket, onChanged }: StatusFormProps) {
           ariaRequired
         />
       ) : null}
-      <button type="submit" disabled={mutation.pending || unchanged}>
+      <button
+        type="submit"
+        className="button button-primary"
+        disabled={mutation.pending || unchanged}
+      >
         Update status
       </button>
     </form>
@@ -590,14 +611,28 @@ function CommentComposer({ ticketId, onPosted }: { ticketId: string; onPosted: (
         errors={errors.fields.body}
         disabled={mutation.pending}
       />
-      <button type="submit" disabled={mutation.pending}>
+      <button type="submit" className="button button-primary" disabled={mutation.pending}>
         Post comment
       </button>
-      {posted ? <p role="status">Comment posted.</p> : null}
+      {posted ? (
+        <p role="status" className="status-note">
+          Comment posted.
+        </p>
+      ) : null}
     </form>
   );
 }
 
+/** One fixed format for every Comment and Status Change, whatever the locale. */
+const timestamp = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
 function Time({ iso }: { iso: string }) {
-  return <time dateTime={iso}>{new Date(iso).toLocaleString()}</time>;
+  return <time dateTime={iso}>{timestamp.format(new Date(iso))}</time>;
 }

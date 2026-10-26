@@ -14,7 +14,7 @@ export function ErrorBanner({ messages, details }: ErrorBannerProps) {
   }
 
   return (
-    <div role="alert">
+    <div role="alert" className="error-banner">
       {messages.map((message, index) => (
         <p key={`${index}-${message}`}>{message}</p>
       ))}
@@ -30,6 +30,7 @@ function CopyDetails({ details }: { details: string }) {
     <>
       <button
         type="button"
+        className="button button-quiet button-small"
         onClick={() => {
           void navigator.clipboard
             .writeText(details)

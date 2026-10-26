@@ -28,7 +28,7 @@ export function FormField({
   ariaRequired = false,
 }: FormFieldProps) {
   return (
-    <div>
+    <div className="field">
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
@@ -64,7 +64,7 @@ export function TextAreaField({
   disabled = false,
 }: TextAreaFieldProps) {
   return (
-    <div>
+    <div className="field">
       <label htmlFor={id}>{label}</label>
       <textarea
         id={id}
@@ -103,7 +103,7 @@ export function SelectField({
   disabled = false,
 }: SelectFieldProps) {
   return (
-    <div>
+    <div className="field">
       <label htmlFor={id}>{label}</label>
       <select
         id={id}
@@ -149,7 +149,7 @@ export function RadioGroupField<T extends string>({
     <fieldset className="radio-group" {...fieldAria(id, errors)}>
       <legend>{label}</legend>
       {options.map((option) => (
-        <label key={option.value}>
+        <label key={option.value} className="radio-option">
           <input
             type="radio"
             name={id}
@@ -158,7 +158,7 @@ export function RadioGroupField<T extends string>({
             onChange={() => onChange(option.value)}
             disabled={disabled}
           />
-          {option.label}
+          <span className="option-label">{option.label}</span>
         </label>
       ))}
       <FieldErrors id={id} errors={errors} />

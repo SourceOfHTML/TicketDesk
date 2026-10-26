@@ -51,18 +51,18 @@ function FilterFieldset<T extends string>({
   onToggle,
 }: FilterFieldsetProps<T>) {
   return (
-    <fieldset>
+    <fieldset className="filter-group">
       <legend>{legend}</legend>
       {options.map((option) => (
-        <label key={option.value}>
+        <label key={option.value} className="filter-option">
           <input
             type="checkbox"
             name={name}
             value={option.value}
             checked={selected.includes(option.value)}
             onChange={() => onToggle(option.value)}
-          />{' '}
-          {option.label}
+          />
+          <span className="option-label">{option.label}</span>
         </label>
       ))}
     </fieldset>
@@ -190,15 +190,16 @@ export default function TicketsPage() {
 
   return (
     <section aria-labelledby="tickets-heading">
-      <h1 id="tickets-heading">Tickets</h1>
-
-      <p>
-        <Link href="/tickets/new">Raise a ticket</Link>
-      </p>
+      <div className="page-header">
+        <h1 id="tickets-heading">Tickets</h1>
+        <Link className="button button-primary" href="/tickets/new">
+          Raise a ticket
+        </Link>
+      </div>
 
       <LoadFailure errors={staffFailure} />
 
-      <div role="group" aria-label="Filters">
+      <div role="group" aria-label="Filters" className="filter-bar">
         <FilterFieldset
           name="status"
           legend="Status"
@@ -230,27 +231,33 @@ export default function TicketsPage() {
 
       <LoadFailure errors={failure} />
 
-      <div aria-busy={firstLoadInFlight ? true : undefined}>
-        <table>
+      <div className="table-scroll" aria-busy={firstLoadInFlight ? true : undefined}>
+        <table className="tickets-table">
           <thead>
             <tr>
-              <th scope="col">Title</th>
+              <th className="cell-title" scope="col">
+                Title
+              </th>
               <th scope="col">Status</th>
               <th scope="col">Priority</th>
-              {isStaff ? <th scope="col">Assignee</th> : null}
+              {isStaff ? (
+                <th className="cell-assignee" scope="col">
+                  Assignee
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {tickets === null ? null : tickets.length === 0 ? (
               <tr>
-                <td colSpan={isStaff ? 4 : 3}>
+                <td colSpan={isStaff ? 4 : 3} className="table-empty">
                   {hasFilters ? 'No tickets match.' : 'No tickets yet.'}
                 </td>
               </tr>
             ) : (
               tickets.map((ticket) => (
                 <tr key={ticket.id}>
-                  <td>
+                  <td className="cell-title">
                     <Link href={`/tickets/${ticket.id}`}>{ticket.title}</Link>
                   </td>
                   <td>
@@ -260,7 +267,9 @@ export default function TicketsPage() {
                     <PriorityBadge priority={ticket.priority} />
                   </td>
                   {isStaff ? (
-                    <td>{ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}</td>
+                    <td className="cell-assignee">
+                      {ticket.assignee === null ? 'Unassigned' : ticket.assignee.email}
+                    </td>
                   ) : null}
                 </tr>
               ))

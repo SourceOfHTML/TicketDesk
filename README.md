@@ -2,8 +2,9 @@
 
 A local helpdesk ticket tracker: Requesters raise Tickets, Staff triage and close them.
 
-The domain vocabulary lives in [`CONTEXT.md`](CONTEXT.md), and the architecture decisions in
-[`docs/adr/`](docs/adr/). The spec is GitHub issue [#30](https://github.com/SourceOfHTML/TicketDesk/issues/30).
+The domain vocabulary lives in [`CONTEXT.md`](CONTEXT.md), the architecture decisions in
+[`docs/adr/`](docs/adr/), and the visual language in [`DESIGN.md`](DESIGN.md). The spec is GitHub
+issue [#30](https://github.com/SourceOfHTML/TicketDesk/issues/30).
 
 ## Getting started
 

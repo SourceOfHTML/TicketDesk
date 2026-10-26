@@ -44,7 +44,7 @@ export default function SignupPage() {
   }
 
   return (
-    <section>
+    <section className="auth-card">
       <h1>Create account</h1>
 
       <ErrorBanner
@@ -74,7 +74,7 @@ export default function SignupPage() {
           disabled={mutation.pending}
           autoComplete="new-password"
         />
-        <button type="submit" disabled={mutation.pending}>
+        <button type="submit" className="button button-primary" disabled={mutation.pending}>
           Create account
         </button>
       </form>

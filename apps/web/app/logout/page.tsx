@@ -20,9 +20,11 @@ export default function LogoutPage() {
   }, []);
 
   return (
-    <section>
+    <section className="auth-card">
       <h1>Sign out</h1>
-      <p role="status">Signing out…</p>
+      <p role="status" className="status-note">
+        Signing out…
+      </p>
     </section>
   );
 }
