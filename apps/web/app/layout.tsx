@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <SessionProvider>
           <Header />
-          <main>{children}</main>
+          <main className="site-main">{children}</main>
         </SessionProvider>
       </body>
     </html>

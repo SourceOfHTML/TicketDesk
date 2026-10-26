@@ -52,10 +52,14 @@ export default function LoginPage() {
   }
 
   return (
-    <section>
+    <section className="auth-card">
       <h1>Sign in</h1>
 
-      {sessionEnded ? <p role="status">Your session ended. Sign in again.</p> : null}
+      {sessionEnded ? (
+        <p role="status" className="status-note">
+          Your session ended. Sign in again.
+        </p>
+      ) : null}
 
       <ErrorBanner
         messages={errors.banner}
@@ -83,6 +87,7 @@ export default function LoginPage() {
         {/* Only the initiating control freezes; the fields stay usable. */}
         <button
           type="submit"
+          className="button button-primary"
           disabled={mutation.pending}
           aria-busy={mutation.pending ? true : undefined}
         >

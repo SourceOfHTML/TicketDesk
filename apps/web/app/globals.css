@@ -1,332 +1,1101 @@
+/* TicketDesk — Quiet utility.
+   Warm paper, ink type, one muted blue accent, hairline rules. Every colour
+   lives in :root so a later theme only overrides this block; component rules
+   never name a raw colour. */
+
+:root {
+  color-scheme: light;
+
+  /* Colour */
+  --color-paper: #faf9f6;
+  --color-surface: #ffffff;
+  --color-sunken: #f3f1eb;
+  --color-ink: #1c1b18;
+  --color-ink-muted: #5a574f;
+  --color-ink-subtle: #6b675d;
+  --color-line: #d9d4c8;
+  --color-line-strong: #8f887a;
+  --color-accent: #3a5f7d;
+  --color-accent-strong: #2f5069;
+  --color-accent-surface: #e8eff7;
+  --color-focus: #2f6fa8;
+  --color-on-accent: #ffffff;
+  --color-danger: #8a2b26;
+  --color-danger-border: #b3261e;
+  --color-danger-surface: #fbedec;
+  --color-staff-surface: #faf6ee;
+  --color-staff-rule: #b8893b;
+  --color-row-hover: #faf8f2;
+
+  /* Status tints; the word is always present, so colour is never the only cue. */
+  --badge-open-ink: #1e4f82;
+  --badge-open-bg: #e8eff7;
+  --badge-in-progress-ink: #7a4a0b;
+  --badge-in-progress-bg: #f7eedf;
+  --badge-resolved-ink: #24603a;
+  --badge-resolved-bg: #e6f1e9;
+  --badge-closed-ink: #4b4741;
+  --badge-closed-bg: #eeebe4;
+
+  /* Priority tints; the squared tag is a second cue beyond the word. */
+  --badge-low-ink: #1f5b57;
+  --badge-low-bg: #e4f0ee;
+  --badge-medium-ink: #6b4a0a;
+  --badge-medium-bg: #f6eddd;
+  --badge-high-ink: #8a2b26;
+  --badge-high-bg: #f6e7e4;
+
+  /* Type: system fonts only. No webfonts, no second family. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2rem;
+  --leading-tight: 1.25;
+  --leading-normal: 1.55;
+
+  /* Space: a 4px base, so every gap and pad shares one rhythm. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Shape: hairlines and small radii, never shadows. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-pill: 999px;
+
+  /* Layout */
+  --container: 60rem;
+  --measure: 70ch;
+  --auth-width: 26rem;
+  --staff-rail: 18rem;
+  --control-height: 2.5rem;
+  --target-height: 2rem;
+
+  --border-hairline: 1px solid var(--color-line);
+  --border-control: 1px solid var(--color-line-strong);
+  --focus-ring: 2px solid var(--color-focus);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
 }
 
-header,
-main {
-  max-width: 60rem;
-  margin: 0 auto;
-  padding: 0 1rem;
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
 }
 
-header {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #d4d4d4;
-}
-
-header nav {
-  display: flex;
-  gap: 0.75rem;
-}
-
-fieldset {
-  border: 0;
-  margin: 0 0 1rem;
+ul,
+ol {
   padding: 0;
+  list-style: none;
 }
 
-fieldset label {
-  margin-right: 0.75rem;
-}
-
-/* Inherited, or the fields fall back to the browser's own fonts. */
+button,
 input,
-textarea,
-select {
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Links are accent-coloured; the underline appears on hover or keyboard focus,
+   where it confirms the target without adding noise to a dense page. */
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent-surface);
+  color: var(--color-ink);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  margin-block: 0 var(--space-4);
+  font-size: var(--text-2xl);
+}
+
+h2 {
+  margin-block: 0 var(--space-3);
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+}
+
+p {
+  margin-block: 0 var(--space-3);
+}
+
+p:last-child {
+  margin-block-end: 0;
+}
+
+time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Layout primitives ---------- */
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  max-inline-size: var(--container);
+  margin-inline: auto;
+  padding: var(--space-4) clamp(var(--space-4), 4vw, var(--space-5));
+  border-block-end: var(--border-hairline);
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.site-brand::before {
+  content: '';
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  border-radius: 2px;
+  background: var(--color-accent);
+  flex: none;
+}
+
+.site-brand:hover {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.site-nav-email {
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.site-nav a {
+  color: var(--color-accent);
+}
+
+.site-main {
+  max-inline-size: var(--container);
+  margin-inline: auto;
+  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-5)) var(--space-8);
+}
+
+/* The page title and its one action share a row until the row runs out of room. */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  margin-block-end: var(--space-5);
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+/* ---------- Buttons ---------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  text-decoration: none;
+}
+
+.button:visited {
+  color: var(--color-ink);
+}
+
+.button-primary,
+.button-primary:visited {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.button-primary:hover:not(:disabled) {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent-strong);
+  color: var(--color-on-accent);
+}
+
+.button-quiet,
+.button-quiet:visited {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.button-quiet:hover:not(:disabled) {
+  background: var(--color-sunken);
+  color: var(--color-ink);
+}
+
+.button-small {
+  min-block-size: 2rem;
+  padding-inline: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.button:disabled {
+  border-color: var(--color-line);
+  background: var(--color-sunken);
+  color: var(--color-ink-subtle);
+  cursor: not-allowed;
+}
+
+/* ---------- Forms ---------- */
+
+.field {
+  max-inline-size: 24rem;
+  margin-block-end: var(--space-4);
+}
+
+.field > label {
+  display: block;
+  margin-block-end: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.field > input,
+.field > select,
+.field > textarea {
+  inline-size: 100%;
+  min-block-size: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
   font: inherit;
 }
 
-/* Fields share one box, sized for a short answer: sign-in and sign-up should
-   not sprawl across the page. */
-input[type='text'],
-input[type='password'],
-textarea {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 20rem;
-  padding: 0.5rem 0.6rem;
-}
-
-/* A Ticket's title and description, and a Comment, have more to say than an
-   email address. */
-.ticket-form input[type='text'],
-.ticket-form textarea,
-.comment-form textarea {
-  max-width: none;
-}
-
-/* The description is a fixed seven-line box; dragging it only breaks the form. */
-textarea {
+.field > textarea {
+  min-block-size: 10rem;
   resize: none;
+  line-height: var(--leading-normal);
 }
 
-/* An invalid control says so before the reader reaches its message. */
-input[aria-invalid='true'],
-textarea[aria-invalid='true'],
-select[aria-invalid='true'] {
-  border: 1px solid #b91c1c;
+.field > input:focus-visible,
+.field > select:focus-visible,
+.field > textarea:focus-visible {
+  border-color: var(--color-focus);
 }
 
-/* Errors are one block, not bullets to hunt for: tinted, bordered, and close
-   to the field they belong to. */
-.field-errors,
-[role='alert'] {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #b91c1c;
-  background: #fef2f2;
-  color: #991b1b;
-  list-style: none;
+.field > input:disabled,
+.field > select:disabled,
+.field > textarea:disabled {
+  background: var(--color-sunken);
+  color: var(--color-ink-subtle);
+  cursor: not-allowed;
 }
 
-/* Beside its field, not floating away from it. */
+/* The API is the only validator, so the form's own invalid state is what the
+   browser is allowed to see. :invalid and :user-invalid are deliberately not
+   styled. */
+.field [aria-invalid='true'] {
+  border-color: var(--color-danger-border);
+}
+
 .field-errors {
-  margin: 0.35rem 0 0;
+  margin-block: var(--space-2) 0;
+  padding-inline-start: 1.1rem;
+  list-style: disc;
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  line-height: 1.5;
 }
 
-/* Above the form it summarizes, with room before the form starts. */
-[role='alert'] {
-  margin: 0 0 1rem;
+/* Let the Ticket and Comment forms use their full card, not the short-answer
+   width that fits an email address. */
+.ticket-form .field,
+.comment-form .field,
+.auth-card .field {
+  max-inline-size: none;
 }
 
-.field-errors li + li,
-[role='alert'] p + p {
-  margin-top: 0.25rem;
+.ticket-form {
+  max-inline-size: 42rem;
 }
 
-[role='alert'] p {
-  margin: 0;
+.comment-form {
+  max-inline-size: var(--measure);
+  margin-block-start: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-/* One field per line, its label above its control. */
-form > div {
-  margin-bottom: 1rem;
+/* ---------- Filters and radio controls ---------- */
+
+.radio-group {
+  min-inline-size: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
 }
 
-form label {
-  display: block;
-  margin-bottom: 0.25rem;
+.radio-group legend {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
 }
 
-/* A radio's label sits beside its control, not above it. */
-.radio-group label {
+.radio-group[aria-invalid='true'] legend {
+  color: var(--color-danger);
+}
+
+.radio-option {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  margin: 0 0.75rem 0 0;
-}
-
-/* The affirmative action: green, roomy, and a size up. */
-button[type='submit'] {
-  padding: 0.65rem 1.5rem;
-  border: 1px solid #14532d;
-  border-radius: 0.3rem;
-  background: #166534;
-  color: #fff;
-  font-size: 1.1rem;
+  gap: var(--space-2);
+  min-block-size: var(--target-height);
+  margin-inline-end: var(--space-3);
+  padding: 2px 0;
   cursor: pointer;
 }
 
-button[type='submit']:hover:not(:disabled) {
-  background: #14532d;
+.radio-option input,
+.filter-option input {
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+  flex: none;
 }
 
-button[type='submit']:disabled {
-  opacity: 0.6;
-  cursor: default;
+.radio-option .option-label {
+  display: inline-flex;
+  align-items: center;
 }
 
-table {
-  width: 100%;
+/* A radio badge is its own control: one boundary, not a pill inside a box.
+   Selection thickens the badge's own edge against its ink; the native radio
+   still carries the platform's own selected state. */
+.radio-option .badge {
+  border: 1px solid var(--color-line-strong);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.radio-option:hover .badge {
+  border-color: currentColor;
+}
+
+.radio-option input:checked + .option-label .badge {
+  border-color: currentColor;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.radio-option:focus-within {
+  border-radius: var(--radius-sm);
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.radio-group[aria-invalid='true'] .radio-option .badge {
+  border-color: var(--color-danger-border);
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+  margin-block-end: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.filter-group {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filter-group legend {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.filter-group label {
+  margin: 0 var(--space-2) var(--space-2) 0;
+}
+
+.filter-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-height);
+  padding: 4px var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.filter-option:hover {
+  border-color: var(--color-line-strong);
+}
+
+.filter-option .option-label {
+  color: var(--color-ink);
+}
+
+.filter-option input:checked + .option-label {
+  color: var(--color-accent-strong);
+  font-weight: 600;
+}
+
+.filter-option:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- Tickets table ---------- */
+
+.table-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.tickets-table {
+  inline-size: 100%;
+  min-inline-size: 40rem;
   border-collapse: collapse;
+  font-size: var(--text-sm);
 }
 
-th,
-td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #d4d4d4;
-  text-align: left;
+.tickets-table th {
+  padding: var(--space-2) var(--space-3);
+  border-block-end: var(--border-hairline);
+  background: var(--color-sunken);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: start;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tickets-table td {
+  padding: var(--space-3);
+  border-block-end: var(--border-hairline);
+  text-align: start;
+  vertical-align: top;
+}
+
+.tickets-table tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.tickets-table tbody tr:hover {
+  background: var(--color-row-hover);
+}
+
+.tickets-table a {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.tickets-table a:hover,
+.tickets-table a:focus-visible {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+}
+
+.cell-title {
+  inline-size: 100%;
+}
+
+.cell-assignee {
+  white-space: nowrap;
+}
+
+.tickets-table td.table-empty {
+  padding: var(--space-6) var(--space-3);
+  color: var(--color-ink-muted);
+  font-style: italic;
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 1.5rem;
+  padding: 2px var(--space-2);
+  border: 1px solid transparent;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.badge-status {
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+}
+
+.badge-status::before {
+  content: '';
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.badge-priority {
+  min-block-size: 1.25rem;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge-priority::before {
+  content: '';
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 1px;
+  background: currentColor;
+  flex: none;
+}
+
+.badge-open {
+  color: var(--badge-open-ink);
+  background: var(--badge-open-bg);
+}
+
+.badge-in-progress {
+  color: var(--badge-in-progress-ink);
+  background: var(--badge-in-progress-bg);
+}
+
+.badge-resolved {
+  color: var(--badge-resolved-ink);
+  background: var(--badge-resolved-bg);
+}
+
+.badge-closed {
+  color: var(--badge-closed-ink);
+  background: var(--badge-closed-bg);
+}
+
+.badge-low {
+  color: var(--badge-low-ink);
+  background: var(--badge-low-bg);
+}
+
+.badge-medium {
+  color: var(--badge-medium-ink);
+  background: var(--badge-medium-bg);
+}
+
+.badge-high {
+  color: var(--badge-high-ink);
+  background: var(--badge-high-bg);
+}
+
+/* ---------- Ticket detail ---------- */
+
+.ticket-layout {
+  display: grid;
+  gap: var(--space-5);
 }
 
 .ticket {
-  margin-top: 1rem;
-  border: 1px solid #d4d4d4;
-  padding: 1.25rem;
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.ticket h1 {
+  margin-block-end: var(--space-3);
+  font-size: var(--text-3xl);
 }
 
 .ticket-description {
+  max-inline-size: var(--measure);
+  margin-block-end: var(--space-4);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-/* One label/value pair per row, so the facts read as a block rather than prose. */
 .ticket-meta {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin: 1.25rem 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-hairline);
 }
 
-.ticket-meta dd {
-  margin: 0;
+.ticket-fact dt {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-/* Staff controls sit between the Ticket and its threads: they change the
-   Ticket, so they live beside it rather than inside its read-only frame. */
+.ticket-fact dd {
+  margin-block-start: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
 .staff-panel {
-  margin-top: 1.5rem;
-  border: 1px solid #a16207;
-  padding: 1rem 1.25rem;
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-inline-start: 3px solid var(--color-staff-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-staff-surface);
 }
 
 .staff-panel h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1em;
+  margin-block-end: var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.staff-panel-controls {
+  display: grid;
+  gap: var(--space-4);
 }
 
 .staff-control {
-  margin-bottom: 1rem;
+  min-inline-size: 0;
 }
 
-.staff-control:last-child {
-  margin-bottom: 0;
+.staff-control .field {
+  max-inline-size: none;
+  margin-block-end: 0;
 }
 
-/* The label above a select or text field; a radio's label stays beside its
-   control. Scoped past the fieldset so it cannot outrank `.radio-group`. */
-.staff-control > div > label {
-  display: block;
-  margin-bottom: 0.25rem;
+.staff-control .radio-group {
+  margin-block-end: 0;
 }
 
-.staff-control select {
-  min-width: 14rem;
-  padding: 0.35rem 0.5rem;
+.staff-panel .button-primary {
+  inline-size: 100%;
 }
 
-/* The thread is its own block, outside the Ticket's frame. */
-.ticket-comments {
-  margin-top: 1.5rem;
-}
-
-.ticket-comments h2 {
-  margin: 0 0 0.75rem;
+.ticket-comments h2,
+.ticket-history h2 {
+  margin-block-end: var(--space-3);
 }
 
 .comment-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  display: grid;
+  gap: var(--space-3);
 }
 
 .comment {
-  border: 1px solid #d4d4d4;
-  padding: 0.75rem 1rem;
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-.comment + .comment {
-  margin-top: 0.75rem;
-}
-
-/* Author and time lead the Comment, so the body reads as what they said. */
 .comment-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
+  color: var(--color-ink-subtle);
+  font-size: var(--text-sm);
 }
 
 .comment-meta strong {
-  color: #111827;
-}
-
-.comment-meta time {
-  color: #4b5563;
-  font-size: 0.9em;
+  color: var(--color-ink);
+  font-weight: 600;
 }
 
 .comment-body {
-  margin: 0.5rem 0 0;
+  max-inline-size: var(--measure);
+  margin-block: var(--space-2) 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-/* The composer sits below the thread it adds to. */
-.comment-form {
-  margin-top: 1rem;
-}
-
-/* The audit trail is the last thing a reader checks, so it stays outside the
-   frame and a size down. */
 .ticket-history {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #d4d4d4;
-  font-size: 0.9em;
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-hairline);
 }
 
-.ticket-history h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1em;
+.timeline {
+  display: grid;
+  gap: var(--space-4);
+  padding-inline-start: var(--space-5);
+  border-inline-start: var(--border-hairline);
 }
 
-.ticket-history ul {
+.timeline li {
+  position: relative;
+}
+
+.timeline li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--space-5) - 3px);
+  inset-block-start: 0.45rem;
+  inline-size: 7px;
+  block-size: 7px;
+  border: 2px solid var(--color-paper);
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.timeline p {
   margin: 0;
-  padding-left: 1.1rem;
+  font-size: var(--text-sm);
 }
 
-.ticket-history p {
-  margin: 0.15rem 0;
+.timeline p:first-child {
+  color: var(--color-ink);
+  font-weight: 600;
 }
 
-.ticket-byline {
-  color: #4b5563;
+.timeline p + p {
+  margin-block-start: var(--space-1);
+  color: var(--color-ink-muted);
 }
 
-.badge {
-  display: inline-block;
-  padding: 0.05rem 0.55rem;
-  border: 1px solid #6b7280;
-  border-radius: 999px;
-  font-size: 0.85em;
-  white-space: nowrap;
+.timeline .ticket-byline {
+  color: var(--color-ink-subtle);
+  font-size: var(--text-xs);
 }
 
-.badge-open {
-  border-color: #2563eb;
-  color: #1d4ed8;
+.empty {
+  color: var(--color-ink-muted);
+  font-style: italic;
 }
 
-.badge-in-progress {
-  border-color: #b45309;
-  color: #92400e;
+/* ---------- Error and status surfaces ---------- */
+
+.error-banner {
+  margin-block-end: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-danger-border);
+  border-inline-start: 3px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-surface);
+  color: var(--color-danger);
 }
 
-.badge-resolved {
-  border-color: #15803d;
-  color: #166534;
+.error-banner p {
+  margin: 0;
 }
 
-.badge-closed {
-  border-color: #4b5563;
-  color: #374151;
+.error-banner p + p {
+  margin-block-start: var(--space-1);
 }
 
-.badge-low {
-  border-color: #0f766e;
-  color: #115e59;
+.error-banner .button {
+  margin-block-start: var(--space-2);
 }
 
-.badge-medium {
-  border-color: #a16207;
-  color: #854d0e;
+.status-note {
+  margin-block: 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-surface);
+  color: var(--color-accent-strong);
+  font-size: var(--text-sm);
 }
 
-.badge-high {
-  border-color: #b91c1c;
-  color: #991b1b;
+.comment-form .status-note {
+  margin-block: var(--space-3) 0;
+}
+
+/* ---------- Auth and empty states ---------- */
+
+.auth-card {
+  max-inline-size: var(--auth-width);
+  margin: var(--space-6) auto 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.auth-card h1 {
+  margin-block-end: var(--space-4);
+}
+
+.auth-card form {
+  margin-block-end: var(--space-4);
+}
+
+.auth-card .status-note {
+  margin-block-end: var(--space-4);
+}
+
+.auth-card .button-primary {
+  inline-size: 100%;
+}
+
+.empty-state {
+  max-inline-size: 34rem;
+  margin: var(--space-6) auto 0;
+  text-align: center;
+}
+
+.empty-state h1 {
+  margin-block-end: var(--space-2);
+}
+
+.empty-state p {
+  color: var(--color-ink-muted);
+}
+
+.back-link {
+  color: var(--color-accent);
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (min-width: 40rem) {
+  /* On a full-width Staff panel, Priority and Assignee may share a row while
+     the status form keeps the full width for its reason field. */
+  .staff-panel-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staff-control-status {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 64rem) {
+  /* A full-width Ticket has room for four facts. The two badge facts need less
+     width than the two email facts, so the email columns take the extra. The
+     Staff rail below narrows the grid back to two. */
+  .ticket-meta {
+    grid-template-columns: 0.8fr 0.8fr 1.2fr 1.2fr;
+  }
+
+  /* Staff get a content column and a rail; Requesters keep one column. */
+  .ticket-layout-staff {
+    grid-template-columns: minmax(0, 1fr) var(--staff-rail);
+    align-items: start;
+  }
+
+  .ticket-layout-staff > .ticket {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ticket-layout-staff > .staff-panel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ticket-layout-staff > .ticket-comments,
+  .ticket-layout-staff > .ticket-history {
+    grid-column: 1 / -1;
+  }
+
+  .ticket-layout-staff .staff-panel-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-layout-staff .staff-control-status {
+    grid-column: auto;
+  }
+
+  /* The rail narrows the content column, so four facts would squeeze email
+     addresses into broken words. Two facts per row keeps them readable. */
+  .ticket-layout-staff .ticket-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48rem) {
+  .site-main {
+    padding-block-start: var(--space-5);
+  }
+
+  .site-header {
+    padding-block: var(--space-3);
+  }
+
+  .ticket h1 {
+    font-size: 1.625rem;
+  }
+
+  .auth-card {
+    margin-block-start: var(--space-5);
+    padding: var(--space-5);
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 30rem) {
+  .page-header .button {
+    inline-size: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .badge {
+    border-color: CanvasText;
+  }
+
+  .button {
+    border-color: ButtonText;
+  }
+
+  .radio-option .badge,
+  .radio-option input:checked + .option-label .badge {
+    border-color: ButtonText;
+  }
+
+  .site-brand::before,
+  .badge::before,
+  .timeline li::before {
+    background: CanvasText;
+  }
+
+  .timeline li::before {
+    border-color: Canvas;
+  }
 }

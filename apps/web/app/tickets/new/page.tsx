@@ -106,13 +106,15 @@ export default function NewTicketPage() {
           errors={errors.fields.priority}
           disabled={mutation.pending}
         />
-        <button type="submit" disabled={mutation.pending}>
+        <button type="submit" className="button button-primary" disabled={mutation.pending}>
           Raise ticket
         </button>
       </form>
 
       <p>
-        <Link href="/tickets">Back to tickets</Link>
+        <Link className="back-link" href="/tickets">
+          Back to tickets
+        </Link>
       </p>
     </section>
   );
