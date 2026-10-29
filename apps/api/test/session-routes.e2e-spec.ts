@@ -57,12 +57,17 @@ describe('the session routes, by actor', () => {
       .send({ email: 'signed-in@example.com', password: 'correct horse' })
       .expect(201);
 
-    // Public either way, and neither signup starts a session: the actor's
-    // own login row is still the only one, and its cookie still works.
-    expect(setCookies(anonymous)).toEqual([]);
-    expect(setCookies(signedIn)).toEqual([]);
-    expect(await prisma.session.count()).toBe(1);
-    await actor.agent.get('/api/auth/me').expect(200);
+    // Public either way, and either way the new account gets its own session.
+    expect(setCookies(anonymous)).toHaveLength(1);
+    expect(setCookies(signedIn)).toHaveLength(1);
+    expect(await prisma.session.count()).toBe(3);
+
+    // Signing up replaces the asking browser's cookie, so a signed-in caller
+    // that signs up a second account is switched into it. Three rows, one
+    // browser: the actor's original session survives but is no longer this
+    // agent's.
+    const me = await actor.agent.get('/api/auth/me').expect(200);
+    expect(me.body).toEqual(signedIn.body);
   });
 
   it('POST /api/auth/logout: anonymous 401, signed in 200', async () => {

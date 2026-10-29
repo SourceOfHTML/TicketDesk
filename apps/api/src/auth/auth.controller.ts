@@ -17,8 +17,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  signup(@ZodBody(signupSchema) input: SignupInput): Promise<UserSummary> {
-    return this.authService.signup(input);
+  async signup(
+    @ZodBody(signupSchema) input: SignupInput,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<UserSummary> {
+    const { user, token } = await this.authService.signup(input);
+    response.append('Set-Cookie', sessionCookie(token));
+    return user;
   }
 
   @Post('login')
