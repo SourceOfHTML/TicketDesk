@@ -22,8 +22,8 @@ export default function SignupPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(values),
       }),
-    // Signup starts no session, so the new account signs in at /login.
-    { onSuccess: () => window.location.assign('/login') },
+    // Signup starts the session, so there is nothing left to sign in to.
+    { onSuccess: () => window.location.assign('/tickets') },
   );
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {

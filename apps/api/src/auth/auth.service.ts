@@ -19,7 +19,11 @@ export interface StartedSession {
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async signup({ email, password }: SignupInput): Promise<UserSummary> {
+  /**
+   * Creating an account signs it in: the caller proves the password by choosing
+   * it, so a second trip through `/login` would only ask what it already knows.
+   */
+  async signup({ email, password }: SignupInput): Promise<StartedSession> {
     const passwordHash = await hashPassword(password);
 
     try {
@@ -28,7 +32,9 @@ export class AuthService {
         select: { id: true, email: true, role: true },
       });
 
-      return userSummarySchema.parse(user);
+      const token = await this.startSession(user.id);
+
+      return { user: userSummarySchema.parse(user), token };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException('email: An account with this email already exists');
@@ -46,12 +52,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const token = generateSessionToken();
-    await this.prisma.session.create({
-      data: { id: token, userId: user.id, expiresAt: sessionExpiry() },
-    });
+    const token = await this.startSession(user.id);
 
     return { user: userSummarySchema.parse(user), token };
+  }
+
+  private async startSession(userId: string): Promise<string> {
+    const token = generateSessionToken();
+    await this.prisma.session.create({
+      data: { id: token, userId, expiresAt: sessionExpiry() },
+    });
+
+    return token;
   }
 
   /**

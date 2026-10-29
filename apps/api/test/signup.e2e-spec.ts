@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createTestApp, resetDb } from './app';
+import { sessionTokenOf, setCookies } from './cookies';
 
 describe('POST /api/auth/signup', () => {
   let app: INestApplication;
@@ -44,13 +45,27 @@ describe('POST /api/auth/signup', () => {
     expect(stored?.passwordHash.startsWith('$argon2id$')).toBe(true);
   });
 
-  it('does not start a session', async () => {
-    const response = await request(app.getHttpServer())
+  it('starts a session, returning a cookie that reads the new account', async () => {
+    const agent = request.agent(app.getHttpServer());
+
+    const response = await agent
       .post('/api/auth/signup')
       .send({ email: 'requester@example.com', password: 'correct horse' })
       .expect(201);
 
-    expect(response.headers['set-cookie']).toBeUndefined();
+    const cookie = setCookies(response)[0];
+    expect(cookie).toMatch(/^session=[^;]+; HttpOnly; SameSite=Lax; Path=\/; Max-Age=604800$/);
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionTokenOf(cookie ?? '') },
+    });
+
+    expect(session?.userId).toBe(response.body.id);
+    expect(session?.expiresAt.getTime()).toBeGreaterThan(Date.now() + 6.9 * 24 * 60 * 60 * 1000);
+
+    // The cookie is the session, not a placeholder: it authenticates already.
+    const me = await agent.get('/api/auth/me').expect(200);
+    expect(me.body).toEqual(response.body);
   });
 
   it('rejects a duplicate email with a field-prefixed 400', async () => {
@@ -69,6 +84,10 @@ describe('POST /api/auth/signup', () => {
       message: expect.stringMatching(/^email: /),
       error: 'Bad Request',
     });
+
+    // A refused signup starts nothing: the first account's session stands alone.
+    expect(setCookies(response)).toEqual([]);
+    expect(await prisma.session.count()).toBe(1);
   });
 
   it('returns exactly the validation envelope for an invalid body', async () => {
